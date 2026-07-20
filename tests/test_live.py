@@ -25,9 +25,7 @@ async def test_live_zurich_school_types():
 
 
 async def test_live_zurich_volksschule_has_summer_break():
-    result = await get_school_holidays(
-        "CH-ZH", "2026-01-01", "2026-12-31", school_type="VS"
-    )
+    result = await get_school_holidays("CH-ZH", "2026-01-01", "2026-12-31", school_type="VS")
     names = {h.name for h in result.holidays}
     assert "Sommerferien" in names
 

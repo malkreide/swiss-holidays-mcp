@@ -174,9 +174,7 @@ class HolidayClient:
     # --------------------------------------------------------------- nager
 
     async def long_weekends(self, year: int) -> tuple[list[dict], str, str]:
-        return await self._cached(
-            f"lw:{year}", f"{NAGER_BASE}/LongWeekend/{year}/CH", {}
-        )
+        return await self._cached(f"lw:{year}", f"{NAGER_BASE}/LongWeekend/{year}/CH", {})
 
     # -------------------------------------------------------------- health
 

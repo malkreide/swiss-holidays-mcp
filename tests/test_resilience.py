@@ -60,9 +60,7 @@ async def test_client_error_is_not_retried():
 
 @respx.mock
 async def test_source_status_reports_outage():
-    respx.get(f"{OPENHOLIDAYS_BASE}/Countries").mock(
-        side_effect=httpx.ConnectError("boom")
-    )
+    respx.get(f"{OPENHOLIDAYS_BASE}/Countries").mock(side_effect=httpx.ConnectError("boom"))
     respx.get(url__regex=r".*nager.*").mock(return_value=httpx.Response(200, json=[]))
     result = await source_status()
 

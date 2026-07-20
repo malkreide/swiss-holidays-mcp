@@ -9,7 +9,9 @@ from __future__ import annotations
 OPENHOLIDAYS_BASE = "https://openholidaysapi.org"
 NAGER_BASE = "https://date.nager.at/api/v3"
 
-USER_AGENT = "swiss-school-calendar-mcp/0.1.0 (+https://github.com/malkreide/swiss-school-calendar-mcp)"
+USER_AGENT = (
+    "swiss-school-calendar-mcp/0.1.0 (+https://github.com/malkreide/swiss-school-calendar-mcp)"
+)
 
 ATTRIBUTION_OPENHOLIDAYS = (
     "Data: OpenHolidays API (openholidaysapi.org) — CC BY 4.0. "
@@ -45,8 +47,30 @@ SUPPORTED_LANGUAGES = ("DE", "FR", "IT", "EN")
 # holiday records may carry sub-cantonal codes (e.g. CH-AI-AP, CH-BE-TH-BL).
 # Always match on the CH-XX prefix, never on string equality.
 CANTON_CODES = (
-    "CH-AG", "CH-AI", "CH-AR", "CH-BE", "CH-BL", "CH-BS", "CH-FR", "CH-GE",
-    "CH-GL", "CH-GR", "CH-JU", "CH-LU", "CH-NE", "CH-NW", "CH-OW", "CH-SG",
-    "CH-SH", "CH-SO", "CH-SZ", "CH-TG", "CH-TI", "CH-UR", "CH-VD", "CH-VS",
-    "CH-ZG", "CH-ZH",
+    "CH-AG",
+    "CH-AI",
+    "CH-AR",
+    "CH-BE",
+    "CH-BL",
+    "CH-BS",
+    "CH-FR",
+    "CH-GE",
+    "CH-GL",
+    "CH-GR",
+    "CH-JU",
+    "CH-LU",
+    "CH-NE",
+    "CH-NW",
+    "CH-OW",
+    "CH-SG",
+    "CH-SH",
+    "CH-SO",
+    "CH-SZ",
+    "CH-TG",
+    "CH-TI",
+    "CH-UR",
+    "CH-VD",
+    "CH-VS",
+    "CH-ZG",
+    "CH-ZH",
 )

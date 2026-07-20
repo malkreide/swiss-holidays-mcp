@@ -126,7 +126,9 @@ async def list_cantons(language: str = "DE") -> CantonListResponse:
         if entry["code"] in CANTON_CODES
     ]
     return CantonListResponse(
-        source=_OH, provenance=provenance, retrieved_at=stamp,
+        source=_OH,
+        provenance=provenance,
+        retrieved_at=stamp,
         cantons=sorted(cantons, key=lambda c: c.code),
     )
 
@@ -161,7 +163,9 @@ async def list_school_types(
         wanted = canton.upper()
         types = [t for t in types if t.canton.upper() == wanted]
     return SchoolTypeListResponse(
-        source=_OH, provenance=provenance, retrieved_at=stamp,
+        source=_OH,
+        provenance=provenance,
+        retrieved_at=stamp,
         school_types=sorted(types, key=lambda t: t.code),
     )
 
@@ -207,15 +211,17 @@ async def get_school_holidays(
             "Check the canton code — an unknown code yields an empty list, not an error."
         )
     return HolidayListResponse(
-        source=_OH, provenance=provenance, retrieved_at=stamp, note=note,
-        count=len(periods), holidays=periods,
+        source=_OH,
+        provenance=provenance,
+        retrieved_at=stamp,
+        note=note,
+        count=len(periods),
+        holidays=periods,
     )
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
-async def get_public_holidays(
-    canton: str, year: int, language: str = "DE"
-) -> HolidayListResponse:
+async def get_public_holidays(canton: str, year: int, language: str = "DE") -> HolidayListResponse:
     """Return public holidays for one canton and calendar year.
 
     Cantonal holidays such as Berchtoldstag differ substantially across
@@ -234,8 +240,11 @@ async def get_public_holidays(
         (_to_period(entry, lang, "Public") for entry in raw), key=lambda p: p.start_date
     )
     return HolidayListResponse(
-        source=_OH, provenance=provenance, retrieved_at=stamp,
-        count=len(periods), holidays=periods,
+        source=_OH,
+        provenance=provenance,
+        retrieved_at=stamp,
+        count=len(periods),
+        holidays=periods,
     )
 
 
@@ -250,9 +259,10 @@ async def check_date(
     """
     lang = normalise_language(language)
     target = date.fromisoformat(check_date_iso)
-    window_from, window_to = (target - timedelta(days=40)).isoformat(), (
-        target + timedelta(days=40)
-    ).isoformat()
+    window_from, window_to = (
+        (target - timedelta(days=40)).isoformat(),
+        (target + timedelta(days=40)).isoformat(),
+    )
 
     async with HolidayClient() as client:
         try:
@@ -264,8 +274,12 @@ async def check_date(
             )
         except UpstreamError as exc:
             return DateCheckResponse(
-                **_degraded(exc, _OH), checked_date=target, canton=canton.upper(),
-                is_school_holiday=False, is_public_holiday=False, matches=[],
+                **_degraded(exc, _OH),
+                checked_date=target,
+                canton=canton.upper(),
+                is_school_holiday=False,
+                is_public_holiday=False,
+                matches=[],
             )
 
     school = [
@@ -279,9 +293,13 @@ async def check_date(
         if p.start_date <= target <= p.end_date
     ]
     return DateCheckResponse(
-        source=_OH, provenance=provenance, retrieved_at=stamp,
-        checked_date=target, canton=canton.upper(),
-        is_school_holiday=bool(school), is_public_holiday=bool(public),
+        source=_OH,
+        provenance=provenance,
+        retrieved_at=stamp,
+        checked_date=target,
+        canton=canton.upper(),
+        is_school_holiday=bool(school),
+        is_public_holiday=bool(public),
         matches=school + public,
     )
 
@@ -332,8 +350,11 @@ async def compare_school_holidays(
         )
 
     return OverlapResponse(
-        source=_OH, provenance=provenance, retrieved_at=stamp,
-        year=year, school_type_filter=school_type,
+        source=_OH,
+        provenance=provenance,
+        retrieved_at=stamp,
+        year=year,
+        school_type_filter=school_type,
         rows=sorted(rows, key=lambda r: -r.overlapping_days),
     )
 
@@ -380,13 +401,18 @@ async def find_common_free_window(
         else:
             windows.append(
                 FreeWindow(
-                    start_date=day, end_date=day, days=1,
-                    cantons_on_holiday=wanted, cantons_in_school=[],
+                    start_date=day,
+                    end_date=day,
+                    days=1,
+                    cantons_on_holiday=wanted,
+                    cantons_in_school=[],
                 )
             )
 
     return WindowResponse(
-        source=_OH, provenance=provenance, retrieved_at=stamp,
+        source=_OH,
+        provenance=provenance,
+        retrieved_at=stamp,
         windows=[w for w in windows if w.days >= min_days],
     )
 
@@ -415,8 +441,11 @@ async def next_school_holidays(
         key=lambda p: p.start_date,
     )[: max(1, count)]
     return HolidayListResponse(
-        source=_OH, provenance=provenance, retrieved_at=stamp,
-        count=len(periods), holidays=periods,
+        source=_OH,
+        provenance=provenance,
+        retrieved_at=stamp,
+        count=len(periods),
+        holidays=periods,
     )
 
 
@@ -444,8 +473,11 @@ async def get_long_weekends(year: int) -> LongWeekendResponse:
         for entry in raw
     ]
     return LongWeekendResponse(
-        source=_NG, provenance=provenance, retrieved_at=stamp,
-        year=year, long_weekends=weekends,
+        source=_NG,
+        provenance=provenance,
+        retrieved_at=stamp,
+        year=year,
+        long_weekends=weekends,
     )
 
 

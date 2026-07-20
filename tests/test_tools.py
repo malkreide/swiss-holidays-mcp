@@ -42,9 +42,7 @@ async def test_school_type_filter_separates_volksschule(zh_school_payload):
 @respx.mock
 async def test_empty_result_sets_explanatory_note():
     """An unknown canton yields HTTP 200 + [] upstream — never a 404."""
-    respx.get(f"{OPENHOLIDAYS_BASE}/SchoolHolidays").mock(
-        return_value=httpx.Response(200, json=[])
-    )
+    respx.get(f"{OPENHOLIDAYS_BASE}/SchoolHolidays").mock(return_value=httpx.Response(200, json=[]))
     result = await get_school_holidays("CH-XX", "2026-01-01", "2026-12-31")
 
     assert result.count == 0
@@ -57,9 +55,7 @@ async def test_check_date_inside_holiday(zh_school_payload):
     respx.get(f"{OPENHOLIDAYS_BASE}/SchoolHolidays").mock(
         return_value=httpx.Response(200, json=zh_school_payload)
     )
-    respx.get(f"{OPENHOLIDAYS_BASE}/PublicHolidays").mock(
-        return_value=httpx.Response(200, json=[])
-    )
+    respx.get(f"{OPENHOLIDAYS_BASE}/PublicHolidays").mock(return_value=httpx.Response(200, json=[]))
     result = await check_date("2026-04-27", "CH-ZH", school_type="VS")
 
     assert result.is_school_holiday is True

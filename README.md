@@ -7,6 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-purple)](https://modelcontextprotocol.io/)
+[![CI](https://github.com/malkreide/swiss-school-calendar-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/malkreide/swiss-school-calendar-mcp/actions)
 [![No Auth Required](https://img.shields.io/badge/auth-not%20required-lightgrey)](https://github.com/malkreide/swiss-school-calendar-mcp)
 [![Data Source](https://img.shields.io/badge/Data-OpenHolidays%20%2F%20Nager.Date-green)](https://www.openholidaysapi.org/)
 
@@ -246,6 +247,9 @@ swiss-school-calendar-mcp/
 │   ├── test_tools.py         # Tool unit tests (mocked, no network)
 │   ├── test_resilience.py    # Degradation / retry / cache behaviour
 │   └── test_live.py          # Live smoke tests (marker: live)
+├── .github/
+│   ├── dependabot.yml        # Weekly dependency / action update PRs
+│   └── workflows/            # ci.yml, live-tests.yml, publish.yml
 ├── pyproject.toml
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md           # Contributing guide (English)
