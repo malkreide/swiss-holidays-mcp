@@ -1,0 +1,492 @@
+{
+  "server": "swiss-school-calendar-mcp",
+  "run_id": "2026-07-20T210848-Z-swiss-school-calendar-mcp",
+  "results": {
+    "ARCH-001": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "server.py:523-667 registers 10 tools, all consistent snake_case: list_cantons, list_school_types, get_school_holidays, get_public_holidays, check_date, compare_school_holidays, find_common_free_window, next_school_holidays, get_long_weekends, source_status. No spaces, dots, brackets or Unicode.",
+        "snake_case is an accepted convention per the check (camelCase preferred, snake_case acceptable); no mixing of conventions anywhere.",
+        "Each @mcp.tool carries a multi-sentence docstring with use-case context, e.g. check_date server.py:594-598 ('Can we schedule the parents' evening on that Thursday?') and list_cantons server.py:525-529 ('Use this first to resolve a canton name to the CH-XX code')."
+      ],
+      "gaps": []
+    },
+    "ARCH-002": {
+      "status": "partial",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "Tool descriptions are rich prose docstrings well over the 100-char median, with use-case framing and explicit differentiation (server.py:537-543 list_school_types explains ZH codes; server.py:556-568 get_school_holidays documents Schulart collapse; server.py:610-615 compare_school_holidays justifies the VS default).",
+        "No tool falls under the 50-char floor; the shortest (next_school_holidays, server.py:646) is still a full descriptive sentence."
+      ],
+      "gaps": [
+        "No structured <use_case> / <important_notes> / <example> tags in any description (grep for these tags in src/ returns nothing) — the check asks for a use_case tag or equivalent in >=80% of tools.",
+        "Caveats live in docstring prose rather than a discrete tagged field, so a client that only surfaces the first line loses them."
+      ]
+    },
+    "ARCH-003": {
+      "status": "partial",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "No tool returns a bare [] or the string 'No results'. Every path returns a typed Envelope carrying source/provenance/retrieved_at (models.py:17-28).",
+        "op_get_school_holidays sets an explanatory note on empty results (server.py:252-258) distinguishing 'canton does not differentiate this Schulart' from 'range holds no holidays'.",
+        "Unknown canton codes now raise an actionable ValueError pointing at another tool: _require_known_canton server.py:119-126 ('Call list_cantons for the 26 valid CH-XX codes').",
+        "Upstream failure returns a degraded envelope with a retry note rather than silence (_degraded server.py:156-168)."
+      ],
+      "gaps": [
+        "Responses carry no match_type field (exact/fuzzy/none) as the check's pass criteria request.",
+        "No fuzzy-match or suggestion mechanism on empty non-sensitive results; op_get_public_holidays (server.py:269-290) and the computed compare/window tools return empty collections with no note.",
+        "check_date returns is_school_holiday/is_public_holiday=false with matches=[] and no note on an ordinary non-holiday date (definitive, so acceptable, but no match_type signal)."
+      ]
+    },
+    "ARCH-004": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "high",
+      "evidence": [
+        "Tool handlers take only ctx: Context and obtain the shared client via ctx.request_context.lifespan_context (_client server.py:109-110); grep for request./.headers/stdin/stdout/websocket in server.py returns nothing — no transport internals leak into handlers.",
+        "Business logic lives in transport-agnostic op_* functions (server.py:178-517); tools are thin wrappers, so the same code path serves stdio and HTTP.",
+        "Dual transport is selectable at runtime from a Pydantic-Settings object: __main__.py:37-60 branches on settings.is_http and runs stdio or sse/streamable-http; settings.py:18-35 defines the typed Settings (env_prefix MCP_).",
+        "Shared setup (one httpx.AsyncClient + cache) is created once in the FastMCP lifespan for all transports (server.py:72-82)."
+      ],
+      "gaps": []
+    },
+    "ARCH-005": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "critical",
+      "evidence": [
+        "Profile is auth=none / Public Open Data: the server holds no API keys, tokens or connection strings. Pattern search across src/ for api_key/password/secret/token/AKIA/connection-strings yields nothing.",
+        "Settings (settings.py:18-35) carries only transport/host/port/log_level — no secret fields, no os.environ.get defaults with embedded values.",
+        "Logging is structured key=value to stderr with no full-settings dump (logging_setup.py:18-40); no secret is ever formatted into a log line.",
+        ".gitignore contains .env and no .env file is present in the repo."
+      ],
+      "gaps": [
+        "No gitleaks/trufflehog secret-scan runs in CI (ci.yml has pip-audit only) — but there are no secrets in this server for such a scan to protect, so impact is nil."
+      ]
+    },
+    "ARCH-006": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "high",
+      "evidence": [
+        "10 tools exposed (server.py:523-667), within the 9-15 'check clusters' band and below the server's own documented 15-20 budget; rationale is stated in the module docstring (server.py:9-12) and README 'Lifecycle Phase'.",
+        "No 1:1 REST mapping: aggregating use-case tools exist — compare_school_holidays builds a pairwise overlap matrix (op_compare_school_holidays server.py:343-391) and find_common_free_window intersects day-sets across cantons (op_find_common_free_window server.py:394-443).",
+        "Anchor demo query (ZH/ZG/AG simultaneous holidays) is answerable in 1-2 tool calls, per README:28-29."
+      ],
+      "gaps": []
+    },
+    "ARCH-007": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "src/swiss_school_calendar_mcp/server.py:308-313 — op_check_date now runs the school_holidays + public_holidays upstream lookups concurrently via asyncio.gather(...), satisfying the 'wo Aggregation Sinn ergibt, parallelisieren' criterion (was sequential/partial before).",
+        "src/swiss_school_calendar_mcp/server.py:334-343 — the check_date result is gedanklich abgeschlossen: DateCheckResponse carries is_school_holiday, is_public_holiday and the merged matches list, so one tool call answers the user's question without follow-up chaining.",
+        "src/swiss_school_calendar_mcp/server.py:590-603 — check_date tool docstring frames the atomic use-case ('Can we schedule the parents' evening on that Thursday?'), the only tool that aggregates two sources; description reflects the abgeschlossene operation (ARCH-002 synergy).",
+        "src/swiss_school_calendar_mcp/server.py:271-292, 346-394, 397-446 — compare/find_common/public/school tools each make a single upstream call and return self-contained envelopes (counts/rows/windows), not IDs or pointers requiring a second call; no internal helper tools are exposed.",
+        "src/swiss_school_calendar_mcp/models.py:67-77 — response models return full holiday period objects, not bare IDs, confirming no LLM-side chaining is forced."
+      ],
+      "gaps": []
+    },
+    "ARCH-008": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "Server is deliberately Tools-only and this is documented and justified in README 'MCP Primitives & Protocol Version' (README.md:284-297): Phase 1 read-only wrapper, Resources deferred to Phase 2 with a concrete future URI scheme (holidays://<canton>/<year>), Prompts omitted for lack of recurring templated workflows.",
+        "README.de.md carries the parallel section 'MCP-Primitive & Protokoll-Version', so the justification exists bilingually.",
+        "The check explicitly accepts a documented, reasoned Tools-only choice in place of using multiple primitives."
+      ],
+      "gaps": []
+    },
+    "ARCH-009": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "high",
+      "evidence": [
+        "Every @mcp.tool passes annotations=_RO (server.py:523,533,547,574,586,602,619,638,650,660) — all 10 tools, no defaults-by-omission.",
+        "_RO sets all four hints explicitly: readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True (server.py:89-94), consistent with the actual behaviour: every tool is a plain idempotent GET against an external API and writes nothing.",
+        "Annotations are documented in the README Tools section (README.md:76) and Safety & Limits table (README.md:96), matching the code."
+      ],
+      "gaps": []
+    },
+    "ARCH-011": {
+      "status": "partial",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "All mandatory top-level files present: README.md, README.de.md, CHANGELOG.md, LICENSE, pyproject.toml; mandatory dirs present: src/, tests/, .github/workflows/ (ci.yml, live-tests.yml, publish.yml).",
+        "Correct src-layout: src/swiss_school_calendar_mcp/ with pyproject [tool.hatch.build.targets.wheel] packages = ['src/swiss_school_calendar_mcp'] (pyproject.toml:45-46).",
+        "README.de.md is at full section parity with README.md (23 top-level ## sections map one-to-one, verified by diff of the heading inventories).",
+        "Cross-cutting concerns are already split into modules: guard.py, settings.py, logging_setup.py, client.py, constants.py, models.py."
+      ],
+      "gaps": [
+        "All 10 tools plus their op_* logic live in a single server.py of 670 lines; the check asks for a tools/ subdirectory (file-per-group) once a server exposes >5 tools and for server.py to stay near ~200 lines (registry/lifecycle only).",
+        "This deviation from the standard layout is not explicitly justified in the README."
+      ]
+    },
+    "ARCH-012": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "src/swiss_school_calendar_mcp/constants.py:18-21 — MCP_PROTOCOL_VERSION = \"2025-06-18\" is an explicit pin (no 'latest', no implicit default), with a comment documenting that the SDK negotiates the wire version and this constant is surfaced explicitly.",
+        "src/swiss_school_calendar_mcp/models.py:127-130 — StatusResponse gained an mcp_protocol_version field (was a dead constant before); it is now part of the public tool schema.",
+        "src/swiss_school_calendar_mcp/server.py:508-521 — op_source_status populates mcp_protocol_version=MCP_PROTOCOL_VERSION, so the pinned version is actually surfaced at runtime (closes the prior 'dead constant, not surfaced' partial).",
+        "README.md:284-297 — 'MCP Primitives & Protocol Version' section states the server is built/tested against 2025-06-18, names the pin location and source_status surfacing, and documents the update policy (Dependabot + CHANGELOG version bumps).",
+        "CHANGELOG.md:1-11 — Keep-a-Changelog format declared (line 4), [0.2.0] release explicitly records 'MCP protocol version tested against 2025-06-18'.",
+        "pyproject.toml:24 — mcp pinned to '>=1.2.0,<2', bounding the SDK/spec surface.",
+        ".github/dependabot.yml:1-19 — Dependabot active with weekly pip + github-actions update PRs (>= the required monthly cadence)."
+      ],
+      "gaps": [
+        "Minor/non-blocking: MCP_PROTOCOL_VERSION is surfaced via source_status but is not passed to the FastMCP(...) constructor at server.py:84 — current FastMCP does not accept a protocol_version argument, so actual wire negotiation still relies on the pinned mcp SDK. All six pass criteria are substantively met; this is an SDK limitation, not a maintainer omission."
+      ]
+    },
+    "SEC-004": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "critical",
+      "evidence": [
+        "guard.py:38-46 assert_host_allowed enforces parsed.scheme == 'https' and host membership in the frozen ALLOWED_HOSTS before any socket is opened.",
+        "guard.py:66-79 assert_resolved_ip_safe does a single socket.getaddrinfo and rejects any resolved address that is_private/is_loopback/is_link_local/is_multicast/is_reserved/is_unspecified.",
+        "guard.py:26,49-51 explicit cloud-metadata blocklist _METADATA_IPS = {'169.254.169.254','fd00:ec2::254'} on top of the range checks; IPv6 loopback (::1) and link-local (fe80::/10) covered by is_loopback/is_link_local.",
+        "client.py:117-119 both guards are invoked at the top of _fetch_with_retry before every GET; client.py:237-238 same in probe().",
+        "client.py:57-63 build_http_client sets follow_redirects=False so a 3xx cannot bounce the request off an allow-listed host."
+      ],
+      "gaps": [
+        "Full TOCTOU-free DNS pinning is not implemented: the guard resolves once for the check, but httpx re-resolves at connect time (documented accepted residual risk, docs/network-egress.md:42-50). Mitigated by the 2-host frozen allow-list + IP blocklist + TLS cert validation. This is the specific concern tracked under SEC-005.",
+        "No production egress-proxy (Smokescreen) as defense-in-depth — not applicable to the default local-stdio deployment."
+      ]
+    },
+    "SEC-005": {
+      "status": "partial",
+      "category": "SEC",
+      "severity": "high",
+      "evidence": [
+        "__main__.py:18-34 _http_security builds TransportSecuritySettings(enable_dns_rebinding_protection=True, allowed_hosts=..., allowed_origins=...) and __main__.py:54 wires it into mcp.settings.transport_security — inbound (browser-driven) DNS-rebinding protection is enabled for the HTTP transport.",
+        "guard.py:66-79 outbound path resolves the host a single time (one getaddrinfo) and range-checks the result before the request.",
+        "docs/network-egress.md:42-50 documents the outbound residual risk as consciously accepted, with compensating controls (2-host allow-list, TLS cert validation, IP blocklist) and recommends a network-layer egress policy for hardened deployments."
+      ],
+      "gaps": [
+        "The core control SEC-005 requires — outbound DNS pinning (reusing the resolved IP for the actual TCP connection with Host-header/SNI preservation) — is NOT implemented; httpx re-resolves at connect time, leaving a TOCTOU window.",
+        "None of the SEC-005 outbound pass-criteria (pinned IP for connection, Host-header/SNI on original hostname, test asserting exactly 1 DNS call) are met.",
+        "Inbound TransportSecuritySettings mitigates a different (inbound) rebinding vector, not the outbound one this check scores."
+      ]
+    },
+    "SEC-006": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "high",
+      "evidence": [
+        "settings.py:21 transport defaults to 'stdio'; __main__.py:41,58-60 falls through to mcp.run(transport='stdio') unless settings.is_http, so the default start opens no TCP port.",
+        "settings.py:29-31 is_http is true only for explicit sse/streamable-http/http, i.e. HTTP transport is opt-in via MCP_TRANSPORT.",
+        "README.md:193-211 documents the local stdio + Claude Desktop (uvx) use case as primary; README.md:214-229 documents the HTTP/cloud case separately with a security note (README.md:356)."
+      ],
+      "gaps": []
+    },
+    "SEC-007": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "high",
+      "evidence": [
+        "Dockerfile:2-7 / 9-14 is a multi-stage build (build stage installs to --prefix=/install, runtime stage copies only the install tree).",
+        "Dockerfile:11 useradd --uid 10001 appuser and Dockerfile:13 USER appuser — the process runs non-root with UID >= 10000, satisfying the applicable pass criterion.",
+        "Dockerfile:17-22 sets MCP_HOST=0.0.0.0 only inside the container with an inline comment explaining the container is already network-isolated and must sit behind an authenticating reverse proxy."
+      ],
+      "gaps": [
+        "readOnlyRootFilesystem, capabilities drop ALL, seccompProfile and runAsNonRoot are Kubernetes securityContext controls; no k8s/Helm manifest exists (deployment is local-stdio + optional Docker), so those criteria are not applicable in-repo.",
+        "No HEALTHCHECK directive (minor; the healthz probe is optional for stdio-first)."
+      ]
+    },
+    "SEC-008": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "medium",
+      "evidence": [
+        "pyproject.toml:1-3 build-backend = hatchling and pyproject.toml:38-39 [project.scripts] uses a plain entry point (__main__:main); no [tool.setuptools.cmdclass], no pre/postinstall hooks, no dynamic code loading at install.",
+        "README.md:202-211 shows the full, ungekürzt uvx installation command (command 'uvx', args ['swiss-school-calendar-mcp']) transparently in claude_desktop_config.json.",
+        ".github/workflows/publish.yml:32-50 publishes via OIDC Trusted Publisher (environment: pypi, permissions id-token: write, pypa/gh-action-pypi-publish@release/v1) — no long-lived API token, Sigstore attestation."
+      ],
+      "gaps": []
+    },
+    "SEC-009": {
+      "status": "n/a",
+      "category": "SEC",
+      "severity": "critical",
+      "evidence": [
+        "Profile: auth = none. The server has no authentication model and no user identity (docs/security.md:26-33, README.md:356), so there is no validated OAuth sub-claim to bind a session to.",
+        "All 10 tools are read-only over Public Open Data (server.py:87-94 _RO annotations); hijacking an unauthenticated read-only session yields no private data, no write and no privilege escalation.",
+        "Session-ID generation is delegated to the pinned MCP SDK (constants.py:21 MCP_PROTOCOL_VERSION 2025-06-18); no custom weak PRNG session IDs are minted in this codebase."
+      ],
+      "gaps": [
+        "If an authenticated/stateful mode is added later, user_id-to-session binding per SEC-009 would become required."
+      ]
+    },
+    "SEC-013": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "high",
+      "evidence": [
+        "No secrets exist: both upstreams (openholidaysapi.org, date.nager.at) are keyless; grep of src/ for os.environ/os.getenv on KEY/SECRET/TOKEN returns nothing (only a docstring mention in settings.py:4). All config flows through the typed Settings object (settings.py:18-27, MCP_ prefix, non-secret).",
+        "docs/security.md:54-58 and SECURITY.md:31 document that the server is read-only and needs no API key — the Stufe-0 (no secret) case, which exceeds the 'Stufe 1 documented' minimum for Public Open Data.",
+        "Dockerfile carries no ENV secret layer (Dockerfile:17-19 only sets non-secret transport/host/port), so a docker history dump exposes no credential."
+      ],
+      "gaps": []
+    },
+    "SEC-016": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "critical",
+      "evidence": [
+        "settings.py:22-25 host = Field(default='127.0.0.1', ...) — the code default bind address is loopback, the primary SEC-016 pass criterion.",
+        "settings.py:33-35 binds_all_interfaces detects 0.0.0.0/'::'; __main__.py:42-51 logs a 'binding_all_interfaces' warning with a hint to use a reverse proxy or MCP_HOST=127.0.0.1 when a public interface is chosen.",
+        "Dockerfile:16-22 sets MCP_HOST=0.0.0.0 explicitly and only inside the container, with a comment documenting that the container is network-isolated and the intended case."
+      ],
+      "gaps": [
+        "README.md:227 env-var table lists MCP_HOST default as '0.0.0.0', which contradicts the actual code default of 127.0.0.1 (settings.py:22). Documentation inconsistency only; the code default — the pass criterion — is correct. Recommend correcting the table to 127.0.0.1 (container override noted separately)."
+      ]
+    },
+    "SEC-018": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "high",
+      "evidence": [
+        "server.py:96-103 defines Annotated Field constraints for every tool argument: CantonCode pattern ^[A-Za-z]{2}-[A-Za-z]{2}$, IsoDate pattern ^\\d{4}-\\d{2}-\\d{2}$, Year Field(ge=MIN_YEAR, le=MAX_YEAR), SchoolTypeCode pattern ^(?i:VS|MS|BS|EO)$, Language pattern ^(?i:DE|FR|IT|EN)$ — all whitelist (anchored) patterns.",
+        "server.py:624 min_days Annotated[int, Field(ge=1, le=90)] and server.py:642 count Annotated[int, Field(ge=1, le=20)] — numeric fields are bounded, no unbounded ranges.",
+        "server.py:119-126 _require_known_canton normalises and validates the canton against the 26-entry CANTON_CODES tuple and raises ValueError for unknown codes; client.py:70-79 normalise_language raises on unsupported languages before any request."
+      ],
+      "gaps": [
+        "Tool args use FastMCP function-signature validation (Annotated Field) rather than an explicit BaseModel with model_config={'strict': True, 'extra': 'forbid'}, so strict-mode coercion suppression and extra-field forbidding are not explicitly asserted. In practice every argument carries a whitelist pattern or numeric bound plus semantic validation, so the exploitable surface is minimal."
+      ]
+    },
+    "SEC-019": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "critical",
+      "evidence": [
+        "docs/security.md:40-45 contains an explicit lethal-trifecta assessment: only the 'private data' leg is present in the weakest sense (public data), no act/exfiltrate leg and no actionable untrusted-instruction ingestion — trifecta not present.",
+        "server.py:87-94 all 10 tools carry _RO annotations (readOnlyHint True, destructiveHint False) and are plain GET wrappers; grep of src/ for send_mail/smtplib/httpx.post/requests.post/.post/slack/webhook returns nothing — no external communication capability.",
+        "constants.py:16 outbound targets are a 2-host frozenset of public open-data APIs; no tool builds a URL from free-text input (docs/network-egress.md:27-28)."
+      ],
+      "gaps": []
+    },
+    "SEC-020": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "critical",
+      "evidence": [
+        "grep of src/ for os.system(|shell=True|eval(|exec(|os.popen(|subprocess returns no matches — the server spawns no subprocesses and evaluates no dynamic code.",
+        "All external interaction is via httpx GETs in client.py (client.py:126,239) with parametrised query dicts (client.py:184-229), not shell strings.",
+        "Filesystem/path handling: the server does no path construction from user input (no os.path.join+concat, no dynamic file operations in src/)."
+      ],
+      "gaps": []
+    },
+    "SEC-021": {
+      "status": "partial",
+      "category": "SEC",
+      "severity": "high",
+      "evidence": [
+        "constants.py:12-16 ALLOWED_HOSTS = frozenset({'openholidaysapi.org','date.nager.at'}) — immutable code-layer allow-list, not env/config-mutable.",
+        "client.py:117-119 guard.assert_host_allowed(url) is called before every outbound GET in _fetch_with_retry, and client.py:237 in probe(); guard.py:33-46 enforces HTTPS + membership.",
+        "docs/network-egress.md:6-34 documents the allow-list, the two hosts and their purpose, and a code-change+review+CHANGELOG update procedure for extending it."
+      ],
+      "gaps": [
+        "The check explicitly requires BOTH layers ('Code-only ist unzureichend'). The network-layer egress control (Kubernetes NetworkPolicy / AWS Security Group / Cloudflare WARP) is NOT implemented — no k8s/Terraform manifest exists in the repo; docs/network-egress.md:44-50 only recommends it as defense-in-depth for a hardened deployment.",
+        "Consistent with the local-stdio + optional-Docker deployment profile there is no orchestration layer in-repo to host a NetworkPolicy, so the network layer is left to the operator at deploy time."
+      ]
+    },
+    "SDK-001": {
+      "status": "pass",
+      "category": "SDK",
+      "severity": "high",
+      "evidence": [
+        "src/swiss_school_calendar_mcp/server.py:72-79 — `lifespan()` decorated with `@asynccontextmanager`, builds one `httpx.AsyncClient` via `build_http_client()`, yields `AppState(client=HolidayClient(http=http))`, and closes the client in the `finally` block (`await http.aclose()`).",
+        "src/swiss_school_calendar_mcp/server.py:82 — `mcp = FastMCP(\"swiss-school-calendar-mcp\", lifespan=lifespan)` passes the lifespan to the constructor.",
+        "src/swiss_school_calendar_mcp/server.py:109-110 — `_client(ctx)` returns `ctx.request_context.lifespan_context.client`; every tool (lines 523-667) resolves the shared client this way, none instantiate httpx per call.",
+        "src/swiss_school_calendar_mcp/client.py:57-63 — `build_http_client()` creates the single shared client with timeout, User-Agent and `follow_redirects=False`; `HolidayClient` reuses it plus a persistent 12h cache (client.py:95-99, 42).",
+        "Single-server setup (one FastMCP, stdio/HTTP), so AsyncExitStack for multi-mount is not applicable."
+      ],
+      "gaps": []
+    },
+    "SDK-002": {
+      "status": "pass",
+      "category": "SDK",
+      "severity": "medium",
+      "evidence": [
+        "pyproject.toml:26 — `pydantic>=2.7` in dependencies (Pydantic v2).",
+        "src/swiss_school_calendar_mcp/models.py:12-16 — `from pydantic import BaseModel, Field`; `Provenance = Literal[\"live_api\", \"cached\", \"degraded\"]` used as an enumerable Literal type.",
+        "src/swiss_school_calendar_mcp/models.py:17-29 — shared `Envelope(BaseModel)` with `source`, `provenance`, `retrieved_at`, `note`; every response model subclasses it (CantonListResponse, HolidayListResponse, DateCheckResponse, OverlapResponse, WindowResponse, LongWeekendResponse, StatusResponse, SchoolTypeListResponse) giving a consistent provenance envelope.",
+        "src/swiss_school_calendar_mcp/server.py:523-667 — all 10 tools carry explicit BaseModel return annotations (e.g. `-> CantonListResponse`, `-> HolidayListResponse`, `-> DateCheckResponse`).",
+        "src/swiss_school_calendar_mcp/models.py:35,50,51,84,110 — mutable defaults use `Field(default_factory=list)`; models.py:48 uses `Literal[\"School\", \"Public\"]` for enumerable kind. No Pydantic v1 syntax (`parse_obj`/`Config`) present."
+      ],
+      "gaps": []
+    },
+    "SDK-003": {
+      "status": "partial",
+      "category": "SDK",
+      "severity": "medium",
+      "evidence": [
+        "src/swiss_school_calendar_mcp/server.py:523-667 — every tool declares `ctx: Context` as its first parameter, so FastMCP dependency-injection is in place (context injection present).",
+        "src/swiss_school_calendar_mcp/server.py:109-110 — `ctx` is genuinely used (not dead code): `_client(ctx)` reads the lifespan-scoped shared client from `ctx.request_context.lifespan_context`.",
+        "src/swiss_school_calendar_mcp/logging_setup.py:31-40 — logging is routed to stderr via `StreamHandler(stream=sys.stderr)` with `propagate=False`, so stdout stays clean for the stdio JSON-RPC channel (OBS-004 satisfied; no `print()` in tool bodies).",
+        "Tools are fast cached GETs (client.py:42 12h cache, 20s timeout) with no `asyncio.sleep`, no large loops and no `gather()` over many tasks, so the >2s progress-report criterion does not apply — `ctx.report_progress()` is legitimately absent."
+      ],
+      "gaps": [
+        "No tool uses `ctx.info()`/`ctx.warning()`/`ctx.error()`/`ctx.report_progress()` — `ctx` serves only as a service locator for the shared client.",
+        "Graceful-degradation and retry events are logged only to the stdlib stderr logger (server.py:159 `_log.warning(\"degraded_response\", ...)`, client.py:134-167). These never reach the MCP client as `notifications/message`; surfacing the degraded path via `ctx.warning()` would make the caveat visible client-side. Low practical impact given the returned envelope already carries `provenance=\"degraded\"` + `note`."
+      ]
+    },
+    "SDK-004": {
+      "status": "partial",
+      "category": "SDK",
+      "severity": "high",
+      "evidence": [
+        "src/swiss_school_calendar_mcp/__main__.py:18-34 — `_http_security()` builds `TransportSecuritySettings(enable_dns_rebinding_protection=True, allowed_hosts=..., allowed_origins=...)`; applied at __main__.py:54 `mcp.settings.transport_security = _http_security(settings)`. This pins Host/Origin (DNS-rebinding protection, SEC-005) but is NOT CORS response-header configuration.",
+        "src/swiss_school_calendar_mcp/__main__.py:29 — `allowed_origins` is loopback-only (`http://127.0.0.1:<port>`, `http://localhost:<port>`); no wildcard.",
+        "No `CORSMiddleware`, `expose_headers` or `Access-Control-Expose-Headers` anywhere in src/ — grep for `CORSMiddleware|expose_headers|allow_origins` returns only the TransportSecuritySettings usage. `Access-Control-Expose-Headers: Mcp-Session-Id` is therefore not set by application code.",
+        "The server mounts the SDK streamable-http/sse app via `mcp.run(transport=...)` (__main__.py:57); the MCP Python SDK's streamable-http app does not add a CORSMiddleware exposing Mcp-Session-Id by default."
+      ],
+      "gaps": [
+        "The specific control this check targets — `Access-Control-Expose-Headers: Mcp-Session-Id` (and `allow_headers` including `Mcp-Session-Id`) — is absent. A browser-based cross-origin client could not read the session header.",
+        "Mitigating context: deployment is local-stdio and, when HTTP is enabled, `allowed_origins` is loopback-only, so a cross-origin browser client is not a supported/target scenario and the practical risk is low. Not a full pass because the header exposure is simply not covered."
+      ]
+    },
+    "SCALE-002": {
+      "status": "n/a",
+      "category": "SCALE",
+      "severity": "high",
+      "evidence": [
+        "Deployment profile is local-stdio, single instance — not a horizontally scaled cloud/LB deployment. No k8s/, helm/, deploy/, railway.toml, render.yaml, docker-compose.yml or wrangler.toml present.",
+        "src/swiss_school_calendar_mcp/__main__.py:37-60 — a single process is launched via `mcp.run(...)`; there is no load balancer, no multi-pod topology and no external session store.",
+        "src/swiss_school_calendar_mcp/__main__.py:41-51 & settings.py:22-23 — HTTP transport binds `127.0.0.1` by default (SEC-016); binding all interfaces is an explicit, warned opt-in with no built-in scaling.",
+        "grep for `redis|memcached|session_manager|SessionStore|sessionAffinity|DurableObject` across src/ returns nothing — no shared-state session manager, consistent with a single-instance deployment where it is not needed."
+      ],
+      "gaps": [
+        "applies_when matches (transport=dual), but there is no horizontally scaled deployment, so neither sticky sessions nor a shared-state session manager is required today.",
+        "Forward note: if this server is ever deployed behind a load balancer across multiple HTTP/SSE replicas, SCALE-002 becomes active and would require Mcp-Session-Id-based sticky sessions or a Redis/Durable-Objects shared session store with an explicit TTL."
+      ]
+    },
+    "OBS-001": {
+      "status": "pass",
+      "category": "OBS",
+      "severity": "high",
+      "evidence": [
+        "src/swiss_school_calendar_mcp/server.py:182-183,245-246,278-279,311-319,357-360,409-410,460-461,483-484 — every op_* wraps the upstream call in try/except UpstreamError and returns a degraded response envelope (a normal, successful tool result) instead of raising; upstream-down / 4xx is treated as an execution error, never bubbled as a JSON-RPC protocol error.",
+        "src/swiss_school_calendar_mcp/server.py:119-126 (_require_known_canton) and client.py:70-79 (normalise_language) raise ValueError for bad inputs — genuine protocol/validation errors that the FastMCP framework formats as JSON-RPC errors, correctly separated from execution errors.",
+        "tests/test_resilience.py:37-59 test_network_failure_degrades_gracefully + test_client_error_is_not_retried assert provenance=='degraded' (execution-error path returned as data, not raised); tests/test_tools.py:55-58 test_unknown_canton_is_rejected asserts ValueError (protocol/validation path).",
+        "src/swiss_school_calendar_mcp/models.py:14,21-28 — Provenance literal includes 'degraded' and the Envelope carries a 'note', making the execution-error result machine-distinguishable from a normal result."
+      ],
+      "gaps": [
+        "The server does not use isError:true tool-result flags nor standardized JSON-RPC codes (-32601/-32603); it relies on FastMCP defaults for protocol errors and models upstream failure as a normal 'degraded' envelope. This is an intentional and consistent design (no-data is still an evaluable result), so the OBS-001 intent — never raising an upstream/API error as a broken-connection protocol error — is fully met."
+      ]
+    },
+    "OBS-002": {
+      "status": "pass",
+      "category": "OBS",
+      "severity": "high",
+      "evidence": [
+        "src/swiss_school_calendar_mcp/server.py:156-168 (_degraded) — the reason argument is a short static label (e.g. 'school_holidays'); it is logged via _log.warning to stderr and NEVER interpolated into the returned envelope, whose 'note' is a fixed generic user-safe string.",
+        "src/swiss_school_calendar_mcp/client.py:129-138 — 4xx path raises UpstreamError(f\"upstream returned HTTP {status}\") surfacing only the status; client.py:156-167 final failure raises UpstreamError(f\"upstream unreachable after {MAX_ATTEMPTS} attempts\") — no raw exception text.",
+        "src/swiss_school_calendar_mcp/client.py:139-154 logs failures with type(exc).__name__ and url/status/attempt only (not str(exc)), so even the stderr log does not carry raw exception messages or hostnames from the exception body.",
+        "tests/test_resilience.py:62-70 test_degraded_note_masks_internal_error injects httpx.ConnectError('secret-internal-host:5432 refused') and asserts 'secret-internal-host' not in result.note.",
+        "No traceback.format_exc / sys.exc_info anywhere in src/ (grep clean); no raw error string returned in any tool result."
+      ],
+      "gaps": [
+        "FastMCP is not initialised with mask_error_details=True (server.py:82). All external IO is wrapped so no known leak vector remains, but an unexpected unhandled exception inside a tool (e.g. a KeyError in _to_period on a malformed upstream record) would fall back to the framework default rather than a guaranteed generic message. Recommend adding mask_error_details=True as defense-in-depth."
+      ]
+    },
+    "OBS-003": {
+      "status": "partial",
+      "category": "OBS",
+      "severity": "medium",
+      "evidence": [
+        "src/swiss_school_calendar_mcp/logging_setup.py:18-40 — a _KeyValueFormatter emits structured logfmt (key=value) lines with ts/level/logger/event plus an expanded 'context' dict; StreamHandler(sys.stderr) and propagate=False. Structured, not plaintext.",
+        "src/swiss_school_calendar_mcp/client.py:134-165 uses _log.warning and _log.error with extra={'context': {...}}; server.py:156-159 _degraded uses _log.warning; __main__.py:43-59 uses log.warning/log.info. So info/warning/error are actively used.",
+        "No print()/console.log/sys.stdout anywhere in src/ (grep clean)."
+      ],
+      "gaps": [
+        "Pass-criterion 1 unmet: no structured-logging library (structlog/pino/loguru) in pyproject.toml dependencies — the implementation is hand-rolled on stdlib logging. The spec names structlog as the Python standard and lists it as a hard criterion (Modus 1 automated grep fails).",
+        "Only 3 of the required >=4 severity levels are actively used (info, warning, error); debug is never emitted.",
+        "No per-tool-call bound context: logs carry url/status/attempt but no tool name, session_id or correlation_id, so multi-step workflows are not correlatable (spec pass-criterion 4)."
+      ]
+    },
+    "OBS-004": {
+      "status": "pass",
+      "category": "OBS",
+      "severity": "critical",
+      "evidence": [
+        "src/swiss_school_calendar_mcp/logging_setup.py:37 — handler = logging.StreamHandler(stream=sys.stderr); logging output is pinned to stderr, and logger.propagate=False (line 35) prevents leaking to a root handler that might target stdout.",
+        "No print(), console.log or sys.stdout anywhere in src/ (grep across src/ returned no matches).",
+        "src/swiss_school_calendar_mcp/__main__.py:37-60 — the same setup_logging()/get_logger() path is used for both stdio and HTTP/SSE transports; there is no transport-dependent logging switch, so the stderr-only guarantee holds under dual transport."
+      ],
+      "gaps": []
+    },
+    "OPS-001": {
+      "status": "pass",
+      "category": "OPS",
+      "severity": "high",
+      "evidence": [
+        "tests/ layout: test_tools.py + test_resilience.py (unit, offline) and test_live.py (live). conftest.py:8-23 stubs DNS resolution and provides a HolidayClient over a respx-patched httpx.AsyncClient.",
+        "Unit tests use respx: tests/test_tools.py:17-19 and tests/test_resilience.py:21-23 use @respx.mock and respx.get(...).mock(...). Tests target the transport-agnostic op_* layer (server.py:178-517), so logic is exercised without a live transport.",
+        "tests/test_live.py:13 pytestmark = pytest.mark.live marks the whole live module; pyproject.toml:50 registers the marker (markers = ['live: hits the real upstream API (excluded from CI)']).",
+        ".github/workflows/ci.yml:42 runs pytest tests/ -v -m 'not live'; .github/workflows/live-tests.yml:7-9,24-25 runs pytest -m live on a nightly cron ('0 4 * * *') plus workflow_dispatch. Both upstreams are keyless so no production credentials are consumed by live tests."
+      ],
+      "gaps": [
+        "Coverage is thinner than the spec's nominal '>=5 unit tests per tool' and '>=1 live test per tool' for all 10 tools (unit tests concentrate on get_school_holidays/check_date/list_cantons/source_status + resilience; live covers 5 ops). All four OPS-001 verification modes (layout, respx, live marker, CI exclusion) pass, so the strategy is sound; broaden per-tool coverage over time."
+      ]
+    },
+    "OPS-002": {
+      "status": "pass",
+      "category": "OPS",
+      "severity": "medium",
+      "evidence": [
+        "README.md contains all mandatory sections: Anchor demo query (line 28), Installation (line 173), Tools table (lines 63-74), Configuration (line 191), Safety & Limits / security (line 92), ASCII architecture diagram (lines 111-123), Known Limitations with 4 items (lines 305-310), License + Contributing.",
+        "README.de.md mirrors the top-level sections (grep of '^## ': Uebersicht, Funktionen, Datenquellen, Tools, Sicherheit & Grenzen, Architektur, Konfiguration, Datenklassifikation, Bekannte Einschraenkungen, Lizenz), keeping the bilingual pair in sync.",
+        "CHANGELOG.md:1-4 follows Keep-a-Changelog 1.1.0 with dated releases (0.2.0 / 0.1.0) and Security/Changed/Added sections; CONTRIBUTING.md + CONTRIBUTING.de.md present (README.md:329-333)."
+      ],
+      "gaps": []
+    },
+    "OPS-003": {
+      "status": "pass",
+      "category": "OPS",
+      "severity": "high",
+      "evidence": [
+        "docs/roadmap.md:1-38 declares Phase 1 (read-only, current, v0.2.0), Phase 2 (municipal layer, planned) with explicit 1->2 prerequisites checklist, and Phase 3 (write/multi-agent, not planned) with its own prerequisites; plus a Non-goals section.",
+        "README.md:274-281 'Lifecycle Phase' declares Phase 1 (read-only, no auth, no side effects); README.de.md:274-291 mirrors it ('Phase 1 (nur lesend)').",
+        "Phase matches tool annotations: server.py:87-94 _RO sets readOnlyHint:true, destructiveHint:false on all 10 tools (all @mcp.tool(annotations=_RO)); no destructive tool exists, consistent with Phase 1.",
+        "CHANGELOG.md:40-42 records the OPS-003 roadmap/docs additions under the 0.2.0 release."
+      ],
+      "gaps": [
+        "The CHANGELOG documents the roadmap addition but does not contain the literal word 'Phase'; this is acceptable because the server is still in its initial Phase 1 and no phase transition has occurred that would require a transition entry."
+      ]
+    },
+    "CH-004": {
+      "status": "pass",
+      "category": "CH",
+      "severity": "medium",
+      "evidence": [
+        "src/swiss_school_calendar_mcp/models.py:17-28 — every response derives from Envelope, which requires a 'source' attribution field and 'provenance'; it cannot be dropped by accident. constants.py:31-38 define ATTRIBUTION_OPENHOLIDAYS ('CC BY 4.0') and ATTRIBUTION_NAGER ('MIT'), each naming source + licence.",
+        "server.py:84-85,195-200,259-266,496-517 — each op_* stamps source=_OH or source=_NG (and source_status combines both), so every tool result carries the licence-bearing attribution string; tests/test_tools.py:26 asserts 'CC BY 4.0' in result.source.",
+        "README.md:49-57 'Data Sources' table lists each source with its licence (CC BY 4.0 / MIT) plus an explicit 'Attribution required' note; README.de.md:49 mirrors it. Sources are never mixed within one tool, so no CC-BY vs MIT re-licensing conflict arises."
+      ],
+      "gaps": []
+    },
+    "CH-006": {
+      "status": "pass",
+      "category": "CH",
+      "severity": "high",
+      "evidence": [
+        "docs/security.md:6-24 'Data classification' section — a per-data-type table (cantons/Schularten/school & public holidays; long weekends; query patterns) all classified 'Oeffentlich (Public / BUI-none)' with a 'Personal data? No' column, and an explicit 'Highest classification handled: Oeffentlich' statement.",
+        "docs/security.md:19-24 addresses aggregation risk explicitly: no PII is fetched/logged/stored, and states there is no granularity/k-anonymity concern because no personal micro-data is ever returned; ISDS (CH-005) and a DSG record are correctly declared not required at Oeffentlich.",
+        "README.md:299-303 'Data classification' section and README.de.md:300-305 'Datenklassifikation' both declare all data as Oeffentlich / Public Open Data, no personal data, pointing to docs/security.md as the full model."
+      ],
+      "gaps": [
+        "No code-level aggregation threshold (k-anonymity / min group size) is implemented, but this is justified and documented: the server only ever returns public holiday calendars with no personal micro-data, so the highest stufe stays Oeffentlich and no threshold is required."
+      ]
+    }
+  }
+}

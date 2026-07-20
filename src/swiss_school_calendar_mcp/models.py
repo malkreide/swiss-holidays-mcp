@@ -125,5 +125,8 @@ class SourceStatus(BaseModel):
 
 
 class StatusResponse(Envelope):
+    mcp_protocol_version: str = Field(
+        description="MCP wire protocol version this server is built and tested against."
+    )
     sources: list[SourceStatus]
     all_healthy: bool

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "SDK-001",
+    "title": "FastMCP Lifespan via @asynccontextmanager + AsyncExitStack",
+    "category": "SDK",
+    "severity": "high",
+    "status": "pass",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/server.py:72-79 — `lifespan()` decorated with `@asynccontextmanager`, builds one `httpx.AsyncClient` via `build_http_client()`, yields `AppState(client=HolidayClient(http=http))`, and closes the client in the `finally` block (`await http.aclose()`).",
+      "src/swiss_school_calendar_mcp/server.py:82 — `mcp = FastMCP(\"swiss-school-calendar-mcp\", lifespan=lifespan)` passes the lifespan to the constructor.",
+      "src/swiss_school_calendar_mcp/server.py:109-110 — `_client(ctx)` returns `ctx.request_context.lifespan_context.client`; every tool (lines 523-667) resolves the shared client this way, none instantiate httpx per call.",
+      "src/swiss_school_calendar_mcp/client.py:57-63 — `build_http_client()` creates the single shared client with timeout, User-Agent and `follow_redirects=False`; `HolidayClient` reuses it plus a persistent 12h cache (client.py:95-99, 42).",
+      "Single-server setup (one FastMCP, stdio/HTTP), so AsyncExitStack for multi-mount is not applicable."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "SDK-002",
+    "title": "Pydantic v2 / TypedDict / Dataclass als Tool-Returns",
+    "category": "SDK",
+    "severity": "medium",
+    "status": "pass",
+    "evidence": [
+      "pyproject.toml:26 — `pydantic>=2.7` in dependencies (Pydantic v2).",
+      "src/swiss_school_calendar_mcp/models.py:12-16 — `from pydantic import BaseModel, Field`; `Provenance = Literal[\"live_api\", \"cached\", \"degraded\"]` used as an enumerable Literal type.",
+      "src/swiss_school_calendar_mcp/models.py:17-29 — shared `Envelope(BaseModel)` with `source`, `provenance`, `retrieved_at`, `note`; every response model subclasses it (CantonListResponse, HolidayListResponse, DateCheckResponse, OverlapResponse, WindowResponse, LongWeekendResponse, StatusResponse, SchoolTypeListResponse) giving a consistent provenance envelope.",
+      "src/swiss_school_calendar_mcp/server.py:523-667 — all 10 tools carry explicit BaseModel return annotations (e.g. `-> CantonListResponse`, `-> HolidayListResponse`, `-> DateCheckResponse`).",
+      "src/swiss_school_calendar_mcp/models.py:35,50,51,84,110 — mutable defaults use `Field(default_factory=list)`; models.py:48 uses `Literal[\"School\", \"Public\"]` for enumerable kind. No Pydantic v1 syntax (`parse_obj`/`Config`) present."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "SDK-003",
+    "title": "Context Injection für Progress Reports und Logging",
+    "category": "SDK",
+    "severity": "medium",
+    "status": "partial",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/server.py:523-667 — every tool declares `ctx: Context` as its first parameter, so FastMCP dependency-injection is in place (context injection present).",
+      "src/swiss_school_calendar_mcp/server.py:109-110 — `ctx` is genuinely used (not dead code): `_client(ctx)` reads the lifespan-scoped shared client from `ctx.request_context.lifespan_context`.",
+      "src/swiss_school_calendar_mcp/logging_setup.py:31-40 — logging is routed to stderr via `StreamHandler(stream=sys.stderr)` with `propagate=False`, so stdout stays clean for the stdio JSON-RPC channel (OBS-004 satisfied; no `print()` in tool bodies).",
+      "Tools are fast cached GETs (client.py:42 12h cache, 20s timeout) with no `asyncio.sleep`, no large loops and no `gather()` over many tasks, so the >2s progress-report criterion does not apply — `ctx.report_progress()` is legitimately absent."
+    ],
+    "gaps": [
+      "No tool uses `ctx.info()`/`ctx.warning()`/`ctx.error()`/`ctx.report_progress()` — `ctx` serves only as a service locator for the shared client.",
+      "Graceful-degradation and retry events are logged only to the stdlib stderr logger (server.py:159 `_log.warning(\"degraded_response\", ...)`, client.py:134-167). These never reach the MCP client as `notifications/message`; surfacing the degraded path via `ctx.warning()` would make the caveat visible client-side. Low practical impact given the returned envelope already carries `provenance=\"degraded\"` + `note`."
+    ],
+    "finding": {
+      "summary": "Context is injected into every tool and correctly used to obtain the shared client, and stderr logging keeps the stdio channel clean, but no tool uses the ctx observability affordances (ctx.info/warning/report_progress); degraded/retry events reach only the stderr logger, not the MCP client.",
+      "file": "src/swiss_school_calendar_mcp/server.py",
+      "line": 523,
+      "recommendation": "Optionally emit `await ctx.warning(...)` on the degraded/UpstreamError path so clients see the caveat as a protocol notification. Progress reporting remains unnecessary while all tools stay sub-2s cached GETs."
+    }
+  },
+  {
+    "id": "SDK-004",
+    "title": "CORS Mcp-Session-Id Exposure bei HTTP/SSE",
+    "category": "SDK",
+    "severity": "high",
+    "status": "partial",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/__main__.py:18-34 — `_http_security()` builds `TransportSecuritySettings(enable_dns_rebinding_protection=True, allowed_hosts=..., allowed_origins=...)`; applied at __main__.py:54 `mcp.settings.transport_security = _http_security(settings)`. This pins Host/Origin (DNS-rebinding protection, SEC-005) but is NOT CORS response-header configuration.",
+      "src/swiss_school_calendar_mcp/__main__.py:29 — `allowed_origins` is loopback-only (`http://127.0.0.1:<port>`, `http://localhost:<port>`); no wildcard.",
+      "No `CORSMiddleware`, `expose_headers` or `Access-Control-Expose-Headers` anywhere in src/ — grep for `CORSMiddleware|expose_headers|allow_origins` returns only the TransportSecuritySettings usage. `Access-Control-Expose-Headers: Mcp-Session-Id` is therefore not set by application code.",
+      "The server mounts the SDK streamable-http/sse app via `mcp.run(transport=...)` (__main__.py:57); the MCP Python SDK's streamable-http app does not add a CORSMiddleware exposing Mcp-Session-Id by default."
+    ],
+    "gaps": [
+      "The specific control this check targets — `Access-Control-Expose-Headers: Mcp-Session-Id` (and `allow_headers` including `Mcp-Session-Id`) — is absent. A browser-based cross-origin client could not read the session header.",
+      "Mitigating context: deployment is local-stdio and, when HTTP is enabled, `allowed_origins` is loopback-only, so a cross-origin browser client is not a supported/target scenario and the practical risk is low. Not a full pass because the header exposure is simply not covered."
+    ],
+    "finding": {
+      "summary": "The HTTP transport configures DNS-rebinding protection and a Host/Origin allow-list but does not add CORSMiddleware with expose_headers=[\"Mcp-Session-Id\"]; browser cross-origin clients could not read the session header. Impact is limited because origins are loopback-only and the deployment profile is local-stdio.",
+      "file": "src/swiss_school_calendar_mcp/__main__.py",
+      "line": 30,
+      "recommendation": "If browser cross-origin use is ever intended, wrap the streamable-http app in a CORSMiddleware with `expose_headers=[\"Mcp-Session-Id\"]`, `allow_headers=[\"Content-Type\",\"Mcp-Session-Id\"]` and an explicit (non-wildcard) origin list from an env var. For the current loopback-only/stdio profile this is optional."
+    }
+  },
+  {
+    "id": "SCALE-002",
+    "title": "Stateful Load Balancing für Streamable HTTP / SSE",
+    "category": "SCALE",
+    "severity": "high",
+    "status": "n/a",
+    "evidence": [
+      "Deployment profile is local-stdio, single instance — not a horizontally scaled cloud/LB deployment. No k8s/, helm/, deploy/, railway.toml, render.yaml, docker-compose.yml or wrangler.toml present.",
+      "src/swiss_school_calendar_mcp/__main__.py:37-60 — a single process is launched via `mcp.run(...)`; there is no load balancer, no multi-pod topology and no external session store.",
+      "src/swiss_school_calendar_mcp/__main__.py:41-51 & settings.py:22-23 — HTTP transport binds `127.0.0.1` by default (SEC-016); binding all interfaces is an explicit, warned opt-in with no built-in scaling.",
+      "grep for `redis|memcached|session_manager|SessionStore|sessionAffinity|DurableObject` across src/ returns nothing — no shared-state session manager, consistent with a single-instance deployment where it is not needed."
+    ],
+    "gaps": [
+      "applies_when matches (transport=dual), but there is no horizontally scaled deployment, so neither sticky sessions nor a shared-state session manager is required today.",
+      "Forward note: if this server is ever deployed behind a load balancer across multiple HTTP/SSE replicas, SCALE-002 becomes active and would require Mcp-Session-Id-based sticky sessions or a Redis/Durable-Objects shared session store with an explicit TTL."
+    ],
+    "finding": null
+  }
+]

@@ -1,0 +1,84 @@
+{
+  "ARCH-002": {
+    "observed": "All 10 tools use plain prose docstrings. They carry use-case context and differentiation in natural language but contain no <use_case>/<important_notes>/<example> tags (or any structured equivalent).",
+    "expected": "Descriptions should embed a use_case tag (or equivalent structured marker) in at least 80% of tools, plus important-notes where caveats exist, to maximise semantic separability at tool-selection time.",
+    "risk": "Lower — descriptions are already informative; missing tags marginally reduce embedding-based tool-selection sharpness between the several similar holiday-lookup tools.",
+    "remediation": "Add a short <use_case> block (and <important_notes> where relevant, e.g. the Schulart de-dup caveat) to each tool description; the existing prose can be lifted almost verbatim.",
+    "effort": "S",
+    "title": "Tool-Beschreibung mit Use-Case-Tags",
+    "severity": "medium",
+    "status": "partial"
+  },
+  "ARCH-003": {
+    "observed": "Empty results are wrapped in typed envelopes and the school-holidays path plus unknown-canton path give actionable guidance, but there is no match_type field and no fuzzy/suggestion fallback; several empty paths (public holidays, compare, window) carry no note.",
+    "expected": "Non-sensitive search tools should expose a match_type field and, on empty exact results, offer heuristic/related results or actionable suggestions.",
+    "risk": "Low — the holiday domain is exact-lookup (canton+date), so fuzzy matching is a weak fit; the main anti-pattern (silent []) is already avoided.",
+    "remediation": "Add a match_type field to the list/date envelopes and extend the empty-result note to the public-holidays and compare/window paths for consistency.",
+    "effort": "S",
+    "title": "«Not Found» Anti-Pattern: Heuristiken statt leerer Antworten",
+    "severity": "medium",
+    "status": "partial"
+  },
+  "ARCH-011": {
+    "observed": "Repo layout, mandatory files, src-layout, CI workflows and README.de.md parity all conform, but the 10 tools and their logic sit in one 670-line server.py with no tools/ package split, and the deviation is undocumented.",
+    "expected": "With >5 tools, tools should be grouped under a tools/ directory (file per group) leaving server.py as a thin registry/lifecycle module (~200 lines), or the deviation should be justified in the README.",
+    "risk": "Low — organisational only; the module is well-structured (op_* logic separated from thin wrappers) but review/test isolation is harder in one large file.",
+    "remediation": "Split tools into src/swiss_school_calendar_mcp/tools/ by cluster (school / public+longweekend / compare+window / status) or add a short README note justifying the single-file layout.",
+    "effort": "S",
+    "title": "Standardisierte Repo-Struktur (src-Layout, tests, README.de.md)",
+    "severity": "medium",
+    "status": "partial"
+  },
+  "SEC-005": {
+    "summary": "Outbound DNS pinning is absent; httpx re-resolves the allow-listed hostname at connect time, so the guard's single-resolution IP check can be bypassed by a rebinding resolver (TOCTOU).",
+    "failure_scenario": "If DNS for openholidaysapi.org or date.nager.at were poisoned with a low-TTL record that returns a public IP during guard.assert_resolved_ip_safe's getaddrinfo but a private/metadata IP during httpx's own connect-time resolution, the outbound request would reach the internal target despite the guard passing.",
+    "file": "src/swiss_school_calendar_mcp/guard.py",
+    "line": 66,
+    "category": "dns-rebinding",
+    "verdict": "CONFIRMED",
+    "remediation": "Pin the resolved IP into the connection (custom httpx transport/resolver reusing the vetted address with SNI+Host preserved) or place a network-layer egress policy restricting egress to the two hosts. Currently accepted as documented residual risk.",
+    "title": "DNS-Rebinding-Prevention: DNS-Pinning gegen TOCTOU",
+    "severity": "high",
+    "status": "partial"
+  },
+  "SEC-021": {
+    "summary": "Egress control is code-layer only; the second (network-layer) egress restriction that SEC-021 mandates is documented as recommended but not shipped in the repo.",
+    "failure_scenario": "If the container image or process were compromised so the in-process assert_host_allowed check is bypassed or removed, nothing at the network layer would stop outbound connections to arbitrary hosts, enabling data exfiltration via an attacker-controlled destination.",
+    "file": "docs/network-egress.md",
+    "line": 44,
+    "category": "egress-control",
+    "verdict": "CONFIRMED",
+    "remediation": "Ship a network-layer egress policy for containerised/cloud deployments (NetworkPolicy or security-group egress restricted to the two hosts on 443 plus DNS). Acceptable to remain code-layer-only for the default local-stdio deployment; document that the network layer is an operator responsibility.",
+    "title": "Egress-Allow-List: Code-Layer und Network-Layer",
+    "severity": "high",
+    "status": "partial"
+  },
+  "SDK-003": {
+    "summary": "Context is injected into every tool and correctly used to obtain the shared client, and stderr logging keeps the stdio channel clean, but no tool uses the ctx observability affordances (ctx.info/warning/report_progress); degraded/retry events reach only the stderr logger, not the MCP client.",
+    "file": "src/swiss_school_calendar_mcp/server.py",
+    "line": 523,
+    "recommendation": "Optionally emit `await ctx.warning(...)` on the degraded/UpstreamError path so clients see the caveat as a protocol notification. Progress reporting remains unnecessary while all tools stay sub-2s cached GETs.",
+    "title": "Context Injection für Progress Reports und Logging",
+    "severity": "medium",
+    "status": "partial"
+  },
+  "SDK-004": {
+    "summary": "The HTTP transport configures DNS-rebinding protection and a Host/Origin allow-list but does not add CORSMiddleware with expose_headers=[\"Mcp-Session-Id\"]; browser cross-origin clients could not read the session header. Impact is limited because origins are loopback-only and the deployment profile is local-stdio.",
+    "file": "src/swiss_school_calendar_mcp/__main__.py",
+    "line": 30,
+    "recommendation": "If browser cross-origin use is ever intended, wrap the streamable-http app in a CORSMiddleware with `expose_headers=[\"Mcp-Session-Id\"]`, `allow_headers=[\"Content-Type\",\"Mcp-Session-Id\"]` and an explicit (non-wildcard) origin list from an env var. For the current loopback-only/stdio profile this is optional.",
+    "title": "CORS Mcp-Session-Id Exposure bei HTTP/SSE",
+    "severity": "high",
+    "status": "partial"
+  },
+  "OBS-003": {
+    "summary": "Structured stderr logging exists (logfmt + severity levels, no prints) but does not use a mandated structured-logging library and lacks per-call correlation context.",
+    "detail": "logging_setup.py implements a hand-rolled key=value formatter on stdlib logging writing to stderr. This is a real improvement over the previous FAIL (output is now structured logfmt with RFC-5424-style severity), but three OBS-003 pass criteria remain unmet: (1) no structlog/loguru dependency in pyproject.toml [tool: automated grep in Modus 1 fails]; (2) only info/warning/error are used, debug is absent (<4 levels); (3) no bound context per tool call (no tool/session_id/correlation_id), only url/status/attempt fields, so multi-step calls cannot be correlated.",
+    "file": "src/swiss_school_calendar_mcp/logging_setup.py",
+    "line": 18,
+    "recommendation": "Adopt structlog (or bind a correlation_id + tool name via logger.bind per tool call) and emit debug-level events for cache hits / request starts to reach >=4 active severity levels. Add structlog>=24 to dependencies.",
+    "severity": "medium",
+    "title": "Structured Logging mit RFC 5424 Severity-Stufen",
+    "status": "partial"
+  }
+}

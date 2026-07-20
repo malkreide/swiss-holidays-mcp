@@ -1,0 +1,38 @@
+[
+  {
+    "id": "ARCH-007",
+    "title": "Capability-Aggregation: Composability intern, Atomarität extern",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "pass",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/server.py:308-313 — op_check_date now runs the school_holidays + public_holidays upstream lookups concurrently via asyncio.gather(...), satisfying the 'wo Aggregation Sinn ergibt, parallelisieren' criterion (was sequential/partial before).",
+      "src/swiss_school_calendar_mcp/server.py:334-343 — the check_date result is gedanklich abgeschlossen: DateCheckResponse carries is_school_holiday, is_public_holiday and the merged matches list, so one tool call answers the user's question without follow-up chaining.",
+      "src/swiss_school_calendar_mcp/server.py:590-603 — check_date tool docstring frames the atomic use-case ('Can we schedule the parents' evening on that Thursday?'), the only tool that aggregates two sources; description reflects the abgeschlossene operation (ARCH-002 synergy).",
+      "src/swiss_school_calendar_mcp/server.py:271-292, 346-394, 397-446 — compare/find_common/public/school tools each make a single upstream call and return self-contained envelopes (counts/rows/windows), not IDs or pointers requiring a second call; no internal helper tools are exposed.",
+      "src/swiss_school_calendar_mcp/models.py:67-77 — response models return full holiday period objects, not bare IDs, confirming no LLM-side chaining is forced."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "ARCH-012",
+    "title": "protocolVersion-Pinning + CHANGELOG + SDK-Update-Disziplin",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "pass",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/constants.py:18-21 — MCP_PROTOCOL_VERSION = \"2025-06-18\" is an explicit pin (no 'latest', no implicit default), with a comment documenting that the SDK negotiates the wire version and this constant is surfaced explicitly.",
+      "src/swiss_school_calendar_mcp/models.py:127-130 — StatusResponse gained an mcp_protocol_version field (was a dead constant before); it is now part of the public tool schema.",
+      "src/swiss_school_calendar_mcp/server.py:508-521 — op_source_status populates mcp_protocol_version=MCP_PROTOCOL_VERSION, so the pinned version is actually surfaced at runtime (closes the prior 'dead constant, not surfaced' partial).",
+      "README.md:284-297 — 'MCP Primitives & Protocol Version' section states the server is built/tested against 2025-06-18, names the pin location and source_status surfacing, and documents the update policy (Dependabot + CHANGELOG version bumps).",
+      "CHANGELOG.md:1-11 — Keep-a-Changelog format declared (line 4), [0.2.0] release explicitly records 'MCP protocol version tested against 2025-06-18'.",
+      "pyproject.toml:24 — mcp pinned to '>=1.2.0,<2', bounding the SDK/spec surface.",
+      ".github/dependabot.yml:1-19 — Dependabot active with weekly pip + github-actions update PRs (>= the required monthly cadence)."
+    ],
+    "gaps": [
+      "Minor/non-blocking: MCP_PROTOCOL_VERSION is surfaced via source_status but is not passed to the FastMCP(...) constructor at server.py:84 — current FastMCP does not accept a protocol_version argument, so actual wire negotiation still relies on the pinned mcp SDK. All six pass criteria are substantively met; this is an SDK limitation, not a maintainer omission."
+    ],
+    "finding": null
+  }
+]

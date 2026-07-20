@@ -1,0 +1,28 @@
+{
+  "audit_meta": {
+    "server_name": "swiss-school-calendar-mcp",
+    "run_id": "2026-07-20T210848-Z-swiss-school-calendar-mcp",
+    "started_at": "2026-07-20T21:08:48.938354+00:00",
+    "timezone_offset": "Z",
+    "skill_version": "1.0.0",
+    "output_dir": "/home/user/swiss-school-calendar-mcp/audits/2026-07-20T210848-Z-swiss-school-calendar-mcp",
+    "catalog_hash": "091f446b27965044ce658a1d5f4b2cabe2b0ab5661dcc1a53b6be8f1f2e093c0",
+    "catalog_dir": "/root/.claude/skills/mcp-audit/checks"
+  },
+  "agent_runs": [],
+  "finished_at": "2026-07-20T21:17:00+00:00",
+  "policy": "fail-or-partial",
+  "reaudit_of": "2026-07-20T184122-Z-swiss-school-calendar-mcp",
+  "result_summary": {
+    "by_status": {
+      "pass": 27,
+      "fail": 0,
+      "partial": 8,
+      "todo": 0,
+      "n/a": 2
+    },
+    "production_ready": true,
+    "blocking": [],
+    "findings": 8
+  }
+}
