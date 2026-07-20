@@ -73,7 +73,7 @@ Beide Quellen sind öffentlich zugänglich, keine Authentifizierung nötig.
 | `get_long_weekends` | Lange Wochenenden und nötige Brückentage | Nager.Date |
 | `source_status` | Erreichbarkeit und Latenz beider Quellen | Eingebaut |
 
-Alle Tools sind mit `readOnlyHint: true` annotiert. Kein Tool schreibt irgendwohin.
+Alle Tools tragen den vollständigen Annotations-Satz — `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: true` (sie erreichen eine externe API). Kein Tool schreibt irgendwohin. Inputs sind schema-validiert (Kantonscodes gegen die 26 bekannten Kantone, Datum als `YYYY-MM-DD`, `year` begrenzt, `language`/`school_type` per Whitelist).
 
 ### Beispiel-Abfragen
 
@@ -238,15 +238,21 @@ swiss-school-calendar-mcp/
 │   └── swiss_school_calendar_mcp/
 │       ├── __init__.py       # Package-Init
 │       ├── __main__.py       # Einstiegspunkt: stdio / SSE / Streamable HTTP
-│       ├── server.py         # FastMCP-Server, 10 Tools
-│       ├── client.py         # HTTP-Client: Retry, 12h-In-Memory-Cache, Normalisierung
-│       ├── constants.py      # Kantonscodes, Schulart-Suffixe, API-Basen
+│       ├── server.py         # FastMCP-Server: Lifespan, 10 Tools, op_*-Logik
+│       ├── client.py         # Geteilter HTTP-Client: Retry, 12h-Cache, Egress-Guard
+│       ├── guard.py          # Egress-/SSRF-Guard (HTTPS + Allow-List + IP-Blocklist)
+│       ├── settings.py       # Pydantic-Settings-Konfig (Loopback-Default)
+│       ├── logging_setup.py  # Strukturiertes Logging auf stderr
+│       ├── constants.py      # Kantonscodes, Schulart-Suffixe, API-Basen, Allow-List
 │       └── models.py         # Pydantic-v2-Antwort-Envelopes
 ├── tests/
 │   ├── conftest.py           # respx-Fixtures
 │   ├── test_tools.py         # Tool-Unit-Tests (gemockt, kein Netzwerk)
 │   ├── test_resilience.py    # Degradation / Retry / Cache-Verhalten
 │   └── test_live.py          # Live-Smoke-Tests (Marker: live)
+├── docs/                     # roadmap.md, security.md, network-egress.md
+├── audits/                   # mcp-audit-Artefakte
+├── Dockerfile                # Non-root Multi-Stage-Container
 ├── .github/
 │   ├── dependabot.yml        # Wöchentliche Dependency-/Action-Update-PRs
 │   └── workflows/            # ci.yml, live-tests.yml, publish.yml
@@ -274,6 +280,29 @@ Besonderheiten wie Sechseläuten und Knabenschiessen, die upstream weder Feierta
 noch Schulferien sind und via [`zurich-opendata-mcp`](https://github.com/malkreide/zurich-opendata-mcp) kämen.
 
 ---
+
+## MCP-Primitive & Protokoll-Version
+
+- **Primitive — bewusst nur Tools.** Ein Phase-1-Read-only-Wrapper, dessen
+  gesamte Oberfläche idempotente, seiteneffektfreie `GET`s sind. **Resources**
+  wurden geprüft und zurückgestellt: ein stabiles URI-Schema
+  (`holidays://<kanton>/<jahr>`) ist ein Phase-2-Thema, sobald die kommunale
+  Ebene dazukommt. Es gibt keine wiederkehrenden Template-Workflows, daher keine
+  **Prompts**. Die Wahl wird in Phase 2 neu bewertet.
+- **MCP-Protokoll-Version.** Gebaut und getestet gegen Protokoll-Version
+  `2025-06-18` (gepinnt als `MCP_PROTOCOL_VERSION`, ausgewiesen von
+  `source_status`). Die Wire-Version wird vom gepinnten `mcp`-SDK
+  (`mcp>=1.2.0,<2`) ausgehandelt.
+- **Update-Policy.** SDK- und Dependency-Bumps kommen via Dependabot
+  (wöchentlich); Protokoll-Version- oder Tool-Definition-Änderungen werden im
+  [`CHANGELOG.md`](CHANGELOG.md) mit Versionssprung dokumentiert.
+
+## Datenklassifikation
+
+Alle Daten sind **Öffentlich / Public Open Data** — aggregierte
+Feiertagskalender, keine Personendaten (DSG/DSGVO). Das ist die höchste vom
+Server verarbeitete Stufe; das vollständige Modell steht in
+[`docs/security.md`](docs/security.md).
 
 ## Bekannte Einschränkungen
 

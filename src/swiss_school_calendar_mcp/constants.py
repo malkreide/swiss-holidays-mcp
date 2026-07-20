@@ -9,8 +9,23 @@ from __future__ import annotations
 OPENHOLIDAYS_BASE = "https://openholidaysapi.org"
 NAGER_BASE = "https://date.nager.at/api/v3"
 
+# SEC-021 / SEC-004: code-layer egress allow-list. Immutable (frozenset), not
+# config-mutable. Every outbound request is checked against this set before the
+# socket is opened (see guard.assert_host_allowed). Extending it is a code change
+# + review, documented in docs/network-egress.md.
+ALLOWED_HOSTS = frozenset({"openholidaysapi.org", "date.nager.at"})
+
+# ARCH-012: the MCP protocol version this server is built and tested against.
+# The negotiated version is handled by the pinned `mcp` SDK; this constant pins
+# the expected wire version explicitly and is surfaced in `source_status`.
+MCP_PROTOCOL_VERSION = "2025-06-18"
+
+# SEC-018: bounds for numeric tool inputs (no unbounded ranges).
+MIN_YEAR = 1970
+MAX_YEAR = 2100
+
 USER_AGENT = (
-    "swiss-school-calendar-mcp/0.1.0 (+https://github.com/malkreide/swiss-school-calendar-mcp)"
+    "swiss-school-calendar-mcp/0.2.0 (+https://github.com/malkreide/swiss-school-calendar-mcp)"
 )
 
 ATTRIBUTION_OPENHOLIDAYS = (

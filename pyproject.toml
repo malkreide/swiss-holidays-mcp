@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "swiss-school-calendar-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "MCP server for Swiss school and public holidays — all 26 cantons, differentiated by Schulart"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,9 +21,10 @@ classifiers = [
     "Topic :: Education",
 ]
 dependencies = [
-    "mcp>=1.2.0",
+    "mcp>=1.2.0,<2",
     "httpx>=0.27",
     "pydantic>=2.7",
+    "pydantic-settings>=2.2",
 ]
 
 [project.optional-dependencies]

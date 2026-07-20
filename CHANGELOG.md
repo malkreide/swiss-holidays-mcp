@@ -3,22 +3,49 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.2.0] — 2026-07-20
 
-### Added
+Security & best-practice remediation following the 2026-07-20 mcp-audit
+(`audits/2026-07-20T184122-Z-…`). Closes the two blocking findings plus the
+open architecture/observability findings. MCP protocol version tested against
+`2025-06-18`.
 
-- GitHub Actions CI (`.github/workflows/ci.yml`): test matrix on Python
-  3.10 / 3.11 / 3.12 (ruff lint, `ruff format --check`, syntax + import checks,
-  mocked unit tests) plus a `pip-audit` dependency-CVE scan.
-- Nightly live-API workflow (`live-tests.yml`) and PyPI trusted-publisher
-  workflow (`publish.yml`).
-- Dependabot (`.github/dependabot.yml`): weekly pip + GitHub Actions updates.
-- CI status badge in the READMEs.
+### Security
+
+- **SEC-016 (critical):** the HTTP/SSE transport now binds **`127.0.0.1` by
+  default**; `MCP_HOST=0.0.0.0` is an explicit opt-in that logs a warning.
+- **SEC-004 / SEC-021:** added a code-layer egress guard (`guard.py`) — HTTPS
+  enforcement, an immutable two-host `frozenset` allow-list, and an SSRF IP
+  blocklist (loopback/private/link-local/cloud-metadata) checked before every
+  request. Documented in `docs/network-egress.md`.
+- **SEC-005 / SDK-004:** DNS-rebinding protection (Host/Origin allow-list)
+  enabled for the HTTP transport.
+- **SEC-018:** all tool inputs are schema-validated (canton against the 26 known
+  codes, `YYYY-MM-DD` dates, bounded `year`/`count`/`min_days`, whitelisted
+  `language`/`school_type`).
+- **OBS-002:** raw exception text and upstream bodies are no longer surfaced in
+  tool results — only in the stderr log.
 
 ### Changed
 
-- Applied `ruff format` to `src/` and `tests/` so the source satisfies the new
-  `ruff format --check` gate. Formatting only — no behaviour change.
+- **SDK-001 / ARCH-004:** a single `httpx.AsyncClient` and the 12h cache now
+  live in the FastMCP **lifespan** and are injected via `Context`, instead of a
+  new client per tool call. The cache is now effective across calls.
+- Configuration moved to a Pydantic-Settings object (`settings.py`).
+
+### Added
+
+- **OBS-003:** structured logging to stderr (`logging_setup.py`).
+- **SEC-007:** non-root multi-stage `Dockerfile`.
+- **OPS-003 / ARCH-012 / ARCH-008 / CH-006:** `docs/roadmap.md`,
+  `docs/security.md`, `docs/network-egress.md`; README sections on MCP
+  primitives, protocol version and data classification.
+- **ARCH-009:** full tool annotations (`destructiveHint`, `idempotentHint`,
+  `openWorldHint`) on every tool.
+- GitHub Actions CI (matrix 3.10/3.11/3.12, ruff, `ruff format --check`,
+  `pip-audit`), nightly live-tests, PyPI trusted-publisher workflow, Dependabot,
+  `.gitignore`, CI badge (from the prior CI PR).
+- Dependency: `pydantic-settings>=2.2`; `mcp` pinned to `>=1.2.0,<2`.
 
 ## [0.1.0] — 2026-07-19
 
