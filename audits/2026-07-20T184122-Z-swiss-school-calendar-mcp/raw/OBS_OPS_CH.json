@@ -1,0 +1,191 @@
+[
+  {
+    "id": "OBS-001",
+    "title": "Protocol vs. Execution Errors: korrekte Trennung",
+    "category": "OBS",
+    "severity": "high",
+    "status": "pass",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/server.py:85-94 — _degraded() builds a data envelope (source/provenance='degraded'/note) rather than raising; upstream failures become tool-result data, not JSON-RPC protocol errors.",
+      "src/swiss_school_calendar_mcp/server.py:115-116, 151-152, 200-201, 236-237, 275-283, 325-328, 383-384, 432-433, 463 — every tool wraps the upstream call in `except UpstreamError` and returns a typed envelope with provenance='degraded'; the protocol connection is never broken by an upstream outage.",
+      "src/swiss_school_calendar_mcp/client.py:37-38, 106-115 — UpstreamError is a dedicated exception raised only after retries/4xx; it is caught in every handler, so it never bubbles to the framework as a crash.",
+      "tests/test_resilience.py:37-58 — execution-error path (ConnectTimeout and 400) is asserted to yield provenance=='degraded' with an empty result, not an exception.",
+      "src/swiss_school_calendar_mcp/client.py:49-58 — normalise_language() raises ValueError for genuinely invalid params, letting FastMCP surface it as a standard JSON-RPC error (protocol layer); tests/test_tools.py:90-93 covers this."
+    ],
+    "gaps": [
+      "Does not use the literal MCP `isError: true` tool-result flag nor explicit JSON-RPC error-code constants (-326xx); instead uses a structured `degraded` provenance envelope. This is a functionally equivalent (arguably clearer) convention for a read-only data server — genuine protocol errors (unknown tool, schema mismatch) are still emitted by FastMCP with correct JSON-RPC codes automatically."
+    ],
+    "finding": null
+  },
+  {
+    "id": "OBS-002",
+    "title": "Mask Error Details: keine Stacktraces / SQL ans LLM",
+    "category": "OBS",
+    "severity": "high",
+    "status": "partial",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/server.py:90-93 — _degraded() interpolates the raw exception into the user-facing note: f\"Upstream is currently unavailable ({exc}). ...\"; this string reaches the LLM context.",
+      "src/swiss_school_calendar_mcp/client.py:109-111 — on 4xx the UpstreamError message embeds the upstream URL and a 300-char excerpt of the response body: f\"HTTP {status} from {url}: {detail}\" where detail = exc.response.text[:300].",
+      "src/swiss_school_calendar_mcp/server.py:43 — FastMCP(\"swiss-school-calendar-mcp\") is constructed without mask_error_details=True.",
+      "No traceback.format_exc()/sys.exc_info() anywhere (grep of src/ returns none), and no SQL, credentials or secrets exist in this server (auth_model=none, no DB) — so the forwarded text is bounded to public-API URLs and public problem+json bodies."
+    ],
+    "gaps": [
+      "Raw exception string is forwarded to the LLM in every degraded note.",
+      "Upstream response body excerpt (exc.response.text[:300]) and full upstream URL are forwarded on 4xx.",
+      "mask_error_details=True is not set on the FastMCP instance.",
+      "No server-side logging channel exists to which original errors could be redirected (see OBS-003)."
+    ],
+    "finding": {
+      "observed": "_degraded() interpolates the raw exception (`{exc}`) into the user-visible note, and client.py embeds a 300-char upstream response-body excerpt plus the full endpoint URL into UpstreamError. FastMCP is initialised without mask_error_details=True.",
+      "expected": "Execution errors surface user-friendly, sanitised messages; raw exception text, upstream bodies and internal URLs stay out of the LLM context and go to a server-side log only. mask_error_details=True (or equivalent) guards unhandled errors.",
+      "risk": "Low in this server's context — data class is Public Open Data with no PII, SQL, or secrets, so the leaked internals are limited to public API URLs and public problem+json bodies. Still a deviation from the masking best practice and a habit that becomes dangerous if the codebase later gains authenticated/private upstreams.",
+      "remediation": "Replace `({exc})` in _degraded() with a fixed generic caveat; drop exc.response.text[:300] and the URL from the user-facing UpstreamError message (keep them only for an internal logger once OBS-003 is addressed); set FastMCP(..., mask_error_details=True).",
+      "effort": "S"
+    }
+  },
+  {
+    "id": "OBS-003",
+    "title": "Structured Logging mit RFC 5424 Severity-Stufen",
+    "category": "OBS",
+    "severity": "medium",
+    "status": "fail",
+    "evidence": [
+      "No structlog/loguru/pino in dependencies — pyproject.toml:23-35 lists only mcp, httpx, pydantic (runtime) and pytest/respx/ruff (dev).",
+      "grep of src/ for `import logging|structlog|loguru|getLogger` returns no matches — there is no logger, no severity levels, and no bound per-call context anywhere in the server or client.",
+      "Error conditions in client.py (_fetch_with_retry retries, UpstreamError) and server.py (degraded branches) produce no log records at any level."
+    ],
+    "gaps": [
+      "No structured logger dependency.",
+      "No JSON/logfmt log output.",
+      "Zero severity levels in use (no debug/info/warning/error).",
+      "No per-tool-call bound context (tool name, correlation/session id).",
+      "Retries and upstream failures are silent — no operational observability."
+    ],
+    "finding": {
+      "observed": "The codebase contains no logging whatsoever: no structlog/loguru dependency, no logger instance, no severity levels, no correlation context. Retries and degradations happen silently.",
+      "expected": "A structured logger (structlog) configured for JSON/logfmt output to stderr, using RFC 5424 severity levels, with per-tool-call bound context (tool name, correlation id) logging invocation, success and failure.",
+      "risk": "Operational blind spot — upstream outages, retry storms and schema drift leave no trace, making incident diagnosis and monitoring aggregation impossible. Medium severity; no direct security impact for a public-data read-only server.",
+      "remediation": "Add structlog to dependencies, configure it with WriteLoggerFactory(file=sys.stderr) and a JSONRenderer, and emit bound log events (tool_invoked/tool_succeeded/tool_failed, retry attempts) across server.py tools and client.py _fetch_with_retry.",
+      "effort": "S"
+    }
+  },
+  {
+    "id": "OBS-004",
+    "title": "stderr für stdio-Server: stdout reserviert für Protocol",
+    "category": "OBS",
+    "severity": "critical",
+    "status": "pass",
+    "evidence": [
+      "grep of src/ for `print(` returns no matches — no print statements anywhere in the package.",
+      "grep of src/ for `sys.stdout|StreamHandler|import logging|getLogger` returns no matches — there is no logging configured to stdout (indeed no logging at all, see OBS-003), so stdout carries only the JSON-RPC stream.",
+      "src/swiss_school_calendar_mcp/__main__.py:10-20 — main() simply calls mcp.run(transport=...); no diagnostic output is written to any stream before or during protocol start.",
+      "Dual transport (stdio + SSE) uses the same clean code path; the stdio branch (__main__.py:20) has no stdout pollution risk."
+    ],
+    "gaps": [
+      "Pass is by absence of any stdout writer rather than by an explicit stderr logging configuration; if logging is later added (OBS-003), it must be pinned to sys.stderr. A CI guard against print( in src/ is not present."
+    ],
+    "finding": null
+  },
+  {
+    "id": "OPS-001",
+    "title": "Test-Strategie: Unit-Tests mocked + Live-Tests gemarkert",
+    "category": "OPS",
+    "severity": "high",
+    "status": "pass",
+    "evidence": [
+      "tests/test_tools.py:1-93 and tests/test_resilience.py:1-65 — respx-mocked unit tests (@respx.mock, httpx.Response) cover happy path, Schulart filter, empty-result note, retry-on-503, graceful degradation, 4xx-no-retry and source_status outage; no network.",
+      "tests/test_live.py:13 — `pytestmark = pytest.mark.live` marks the whole live module; 5 live tests hit the real OpenHolidays/Nager APIs (list_cantons, list_school_types, get_school_holidays, compare_school_holidays, source_status).",
+      "pyproject.toml:47-49 — [tool.pytest.ini_options] registers markers = [\"live: hits the real upstream API (excluded from CI)\"] and asyncio_mode=auto.",
+      ".github/workflows/ci.yml:41-45 — CI runs `pytest tests/ -v -m \"not live\"`, excluding live tests on every PR/push.",
+      ".github/workflows/live-tests.yml:6-28 — separate nightly workflow (cron '0 4 * * *' + workflow_dispatch) runs `pytest tests/ -m live -v`."
+    ],
+    "gaps": [
+      "No auth/API-keys in play (both upstreams are public), so the SEC-013 test-credential criterion is not applicable. Unit files are named test_tools.py/test_resilience.py rather than test_unit.py — cosmetic only."
+    ],
+    "finding": null
+  },
+  {
+    "id": "OPS-002",
+    "title": "Doku-Standard: bilingualer README, ASCII-Diagramm, Limits-Sektion",
+    "category": "OPS",
+    "severity": "medium",
+    "status": "pass",
+    "evidence": [
+      "README.md and README.de.md both present with synchronised top-level sections (Overview/Übersicht, Features, Data Sources, Tools, Configuration, Safety & Limits, Architecture, Testing, Security, License — grep of `^## ` in both).",
+      "README.md:28 — prominent Anchor demo query: \"In which weeks of 2026 are the compulsory schools of Zurich, Zug and Aargau simultaneously on holiday...\"; README.de.md:28-29 mirrors it and names the tools it exercises.",
+      "README.md:111-123 — ASCII architecture diagram (box-drawing chars, data-flow arrows) with OpenHolidays/Nager upstreams and retry/cache annotations; README.de.md:107 has the German equivalent.",
+      "README.md:92-103 Safety & Limits table + README.md:278-285 Known Limitations (>=3 explicit limits: no municipal layer, only 6 cantons differentiate, empty-list semantics); README.de.md:92, 278 mirror them.",
+      "CHANGELOG.md, CONTRIBUTING.md, CONTRIBUTING.de.md, EXAMPLES.md, SECURITY.md/SECURITY.de.md all present; README.md:49-57 Data Sources table documents CC BY 4.0 / MIT licences."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "OPS-003",
+    "title": "Phasenarchitektur: Read-only First, dann Write, dann Multi-Agent",
+    "category": "OPS",
+    "severity": "high",
+    "status": "partial",
+    "evidence": [
+      "README.md:268-276 'Lifecycle Phase' — explicitly declares 'Phase 1 (read-only) — all tools read-only, no auth, no side effects' and names a Phase 2 candidate (Zurich municipal specifics); README.de.md:268 mirrors it.",
+      "src/swiss_school_calendar_mcp/server.py:104,136,173,223,251,307,362,420,452,484 — every @mcp.tool declares annotations={\"readOnlyHint\": True}; no destructiveHint / write tool exists, matching the declared phase (write_capable=false).",
+      "src/swiss_school_calendar_mcp/server.py:1-6 module docstring documents the 10/15-20 tool budget explicitly reserving headroom for a Phase 2 extension.",
+      "CHANGELOG.md documents the read-only Architecture-A decision (grep hit line ~50)."
+    ],
+    "gaps": [
+      "No dedicated docs/roadmap.md file with phase-specific task lists (find for *roadmap* returns nothing; no docs/ directory).",
+      "Phase-1->2 transition prerequisites (audit run, ISDS classification, DSG processing record) are not documented as gates.",
+      "Phase status is prose in the README rather than the status-table format the check illustrates."
+    ],
+    "finding": {
+      "observed": "The server correctly declares and implements Phase 1 (read-only, all tools readOnlyHint:true, no write/destructive tools), but there is no standalone roadmap.md and no documented phase-transition prerequisites/gates.",
+      "expected": "Phase declared (met) plus a roadmap file enumerating phase-specific tasks and the documented preconditions for advancing Phase 1->2 (audit, ISDS/CH-005, DSG/CH-002).",
+      "risk": "Low operationally for a read-only public-data server — the core discipline (read-only first) is honoured. The gap is documentation completeness: future maintainers lack an explicit gate before adding a semantic layer or write tools.",
+      "remediation": "Add docs/roadmap.md with Phase 1/2/3 task checklists and the Phase-1->2 prerequisites; optionally reformat the README Lifecycle Phase section as a status table.",
+      "effort": "S"
+    }
+  },
+  {
+    "id": "CH-004",
+    "title": "OGD-CH Lizenz-Compliance: CC BY 4.0 Attribution",
+    "category": "CH",
+    "severity": "medium",
+    "status": "pass",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/constants.py:16-23 — ATTRIBUTION_OPENHOLIDAYS cites 'OpenHolidays API (openholidaysapi.org) — CC BY 4.0' and ATTRIBUTION_NAGER cites 'Nager.Date (date.nager.at) — MIT', both noting the cantonal authority remains authoritative.",
+      "src/swiss_school_calendar_mcp/models.py:17-28 — the base Envelope requires a `source` (attribution) and `provenance` field, so no response can drop attribution; every response model inherits it.",
+      "src/swiss_school_calendar_mcp/server.py:45-46 assigns _OH/_NG and passes source=_OH or source=_NG on every success AND every degraded return (e.g. lines 129, 216, 352, 475, 497-498; _degraded() at line 86 also sets source).",
+      "tests/test_tools.py:24 asserts 'CC BY 4.0' in result.source — attribution emission is test-enforced.",
+      "README.md:49-57 Data Sources table lists each source with its licence and an explicit 'Attribution required' note; README.de.md:49 mirrors it."
+    ],
+    "gaps": [
+      "Aggregating tools (compare_school_holidays, find_common_free_window) carry a single top-level source string for CC-BY data only, which is correct here since only OpenHolidays data is aggregated; no CC BY / MIT mixing occurs in one payload."
+    ],
+    "finding": null
+  },
+  {
+    "id": "CH-006",
+    "title": "Schulamt Klassifikationsschema: BUI/Vertraulich/Streng-Vertraulich",
+    "category": "CH",
+    "severity": "high",
+    "status": "partial",
+    "evidence": [
+      "README.md:97 Safety & Limits declares 'Personal data | No personal data — all sources are aggregated, public holiday calendars'; README.de.md:97 mirrors ('Keine Personendaten').",
+      "SECURITY.md:33-36 — 'All tools perform HTTP GET requests against the public OpenHolidays and ... APIs return aggregated, public holiday calendars only.' — implicit 'Öffentlich' classification.",
+      "No formal classification document exists — find for *klassif*/*classif* returns nothing; no docs/ directory; no explicit BUI/VERT/SVERT statement in any file.",
+      "src/swiss_school_calendar_mcp/server.py:307-359, 362-417 — aggregating tools operate only on cantonal-level public holiday calendars (no per-pupil/per-class data), so there is no re-identification surface; but no k-anonymity/min-group-size guard or aggregation-risk statement is present (grep for k_anonymity/min_class_size returns none)."
+    ],
+    "gaps": [
+      "No explicit classification declaration using the Stadt Zürich scheme (highest level not stated as 'Öffentlich').",
+      "No measures-mapping per level and no explicit aggregation-risk analysis, even to state that cross-cantonal aggregation of public calendars poses no re-identification risk.",
+      "Classification is only implied via 'no personal data' prose in README/SECURITY, not a standalone documented artefact."
+    ],
+    "finding": {
+      "observed": "The server processes only Public Open Data (holiday calendars, no PII) and states 'no personal data' in README/SECURITY, but there is no explicit Schulamt classification declaration (Öffentlich/BUI/VERT/SVERT), no highest-level statement, and no aggregation-risk note — despite schulamt_context=true making this check mandatory.",
+      "expected": "An explicit classification artefact declaring the highest data class as 'Öffentlich', with a short aggregation-risk statement confirming that cross-cantonal aggregation of public holiday calendars cannot re-identify individuals.",
+      "risk": "Low in substance — the data is genuinely public with no PII, so the correct class is 'Öffentlich' and no re-identification is possible. The gap is formal: without an explicit declaration, an operations team cannot confirm the classification was assessed rather than assumed. Severity high per the mandatory-for-Schulamt frontmatter, but real-world risk is minimal.",
+      "remediation": "Add a short classification statement (e.g. docs/klassifikation.md or a README subsection) declaring highest level 'Öffentlich', listing the data types, and explicitly noting the nil aggregation/re-identification risk since only cantonal-level public calendars are handled.",
+      "effort": "S"
+    }
+  }
+]

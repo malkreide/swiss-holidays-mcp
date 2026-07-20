@@ -1,0 +1,231 @@
+[
+  {
+    "id": "ARCH-001",
+    "title": "Tool Naming Convention",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "pass",
+    "evidence": [
+      "All 10 tool functions use one consistent snake_case convention with no name= override, so tool name == function name: src/swiss_school_calendar_mcp/server.py:105 list_cantons, :137 list_school_types, :174 get_school_holidays, :224 get_public_holidays, :252 check_date, :308 compare_school_holidays, :363 find_common_free_window, :421 next_school_holidays, :453 get_long_weekends, :485 source_status",
+      "No spaces, dots, parentheses or Unicode in any tool name (snake_case throughout) — server.py:104-506",
+      "Docstrings provide use-case context beyond bare function, e.g. server.py:107-110 ('Use this first to resolve a canton name...') and server.py:257-258 ('The everyday question behind this tool: \"Can we schedule the parents' evening...\"')"
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "ARCH-002",
+    "title": "Tool-Beschreibung mit Use-Case-Tags",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "partial",
+    "evidence": [
+      "Descriptions are multi-sentence docstrings well above the 100-char median threshold — e.g. server.py:181-193 (get_school_holidays) and server.py:174-193 with Args block",
+      "Differentiation between similar tools is explicit: get_school_holidays vs get_public_holidays vs next_school_holidays each state their distinct purpose (server.py:174-193, :224-229, :421-424)",
+      "No <use_case> / <important_notes> / <example> XML tags anywhere in src/ — use-case info is embedded as prose only, and some tools have minimal framing (next_school_holidays docstring is a single sentence, server.py:424)"
+    ],
+    "gaps": [
+      "No structured use_case/important_notes tags in any of the 10 tools (0% vs required 80%)",
+      "next_school_holidays has only a one-sentence description with no use-case or caveat framing"
+    ],
+    "finding": {
+      "observed": "Tool descriptions are decent multi-sentence docstrings with prose context and explicit differentiation, but contain no structured <use_case>/<important_notes> tags, and at least one tool (next_school_holidays) is a single terse sentence.",
+      "expected": "Use-case tag (or equivalent structured section) present in >=80% of tools; caveats/limitations surfaced in-description; every tool >= 100 chars with clear differentiation.",
+      "risk": "Weaker semantic separation at tool-selection time; the LLM has less structured signal to disambiguate the several holiday-lookup tools, mildly raising wrong-tool-selection risk.",
+      "remediation": "Add a short structured use-case/important-notes block (tags or a consistent 'Use when: ... Do not use for: ...' convention) to each docstring; expand next_school_holidays with use-case and the VS default caveat.",
+      "effort": "S"
+    }
+  },
+  {
+    "id": "ARCH-003",
+    "title": "«Not Found» Anti-Pattern: Heuristiken statt leerer Antworten",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "partial",
+    "evidence": [
+      "The bare-[] / 'No results found' anti-pattern is avoided: empty results return a structured Pydantic envelope with count=0 and an explanatory note — server.py:207-220 (get_school_holidays sets note explaining an unknown canton code yields an empty list, not an error)",
+      "No match_type field (exact/fuzzy/none) on any response model — models.py:67-69 (HolidayListResponse has only count + holidays)",
+      "No fuzzy-match or suggestion mechanism anywhere; other tools return empty lists silently without the explanatory note (e.g. list_school_types canton filter server.py:162-170; compare_school_holidays server.py:339-359)"
+    ],
+    "gaps": [
+      "No match_type/match-quality field on responses",
+      "No fuzzy fallback or suggestion mechanism for empty results",
+      "Explanatory note is only implemented in get_school_holidays, not in the other search-style tools"
+    ],
+    "finding": {
+      "observed": "Empty results are wrapped in a structured envelope (no bare [] or 'No results' string), and get_school_holidays adds a helpful note; but there is no match_type field, no fuzzy/suggestion fallback, and only one tool carries an explanatory empty note.",
+      "expected": "Non-sensitive search tools surface a match_type field (exact/fuzzy/none) and provide fuzzy matches or actionable suggestions on empty results; empty-result notes present consistently across search tools.",
+      "risk": "On a mistyped canton code or an off-range date the model receives an empty list from most tools with no guidance, increasing the chance it hallucinates a holiday or dead-ends instead of correcting the query.",
+      "remediation": "Add a match_type field to the response envelope and populate it; extend the explanatory-note pattern (already in get_school_holidays) to the other list/search tools; optionally suggest valid canton codes on empty results.",
+      "effort": "M"
+    }
+  },
+  {
+    "id": "ARCH-004",
+    "title": "Inversion of Control: Transport-agnostische Server-Logik",
+    "category": "ARCH",
+    "severity": "high",
+    "status": "partial",
+    "evidence": [
+      "Tool handlers are transport-agnostic: none access request/headers/websocket/stdin/stdout — all take plain typed args (server.py:104-503), so stdio and SSE produce identical results",
+      "Dual transport selectable via ENV: __main__.py:11-20 reads MCP_TRANSPORT and dispatches to stdio / sse / streamable-http",
+      "Config is read via raw os.environ.get, not a Pydantic BaseSettings object, and mcp is a module-global: __main__.py:16-17 (mcp.settings.host/port from os.environ) and server.py:43 (mcp = FastMCP(...) global); no BaseSettings/Settings class anywhere in src/"
+    ],
+    "gaps": [
+      "No Pydantic-Settings (or equivalent) settings object; configuration is scattered os.environ.get calls",
+      "No shared lifespan/setup; HolidayClient is created per-call via `async with HolidayClient()` (server.py:112 etc.) rather than injected"
+    ],
+    "finding": {
+      "observed": "Handlers are cleanly transport-agnostic and dual transport works via MCP_TRANSPORT, but configuration uses ad-hoc os.environ.get in __main__.py rather than a typed Settings object, and there is no shared lifespan (the HTTP client is instantiated per tool call).",
+      "expected": "Configuration centralised in a Pydantic-Settings object; shared setup (HTTP client) provided via lifespan/DI rather than per-call construction.",
+      "risk": "Config drift and untyped env parsing (e.g. int(PORT)) can fail at runtime; per-call client construction forgoes connection reuse. Low correctness risk here (server is transport-agnostic) but weaker testability and config discipline.",
+      "remediation": "Introduce a BaseSettings class for transport/host/port; move the HTTP client into a FastMCP lifespan and inject it, so tools do not construct a client per call.",
+      "effort": "M"
+    }
+  },
+  {
+    "id": "ARCH-005",
+    "title": "Keine Hardcoded Secrets: Env-Vars / Secret Manager only",
+    "category": "ARCH",
+    "severity": "critical",
+    "status": "pass",
+    "evidence": [
+      "Server requires no secrets at all (auth_model=none; both upstreams are public open-data APIs) — no API keys, tokens, passwords, or connection strings anywhere in src/ (constants.py:9-23 hold only public base URLs and attribution strings)",
+      "No os.environ.get default carrying a real secret; the only env reads are transport/host/port in __main__.py:11-17",
+      ".gitignore includes .env (last line) so any local env file is excluded from commits"
+    ],
+    "gaps": [
+      "No dedicated gitleaks/trufflehog secret-scan in CI (ci.yml runs pip-audit only) and no .env.example — both moot for a secretless server, noted for portfolio consistency only"
+    ],
+    "finding": null
+  },
+  {
+    "id": "ARCH-006",
+    "title": "Tool-Budget: High-Level-Use-Cases statt API-Mapping 1:1",
+    "category": "ARCH",
+    "severity": "high",
+    "status": "pass",
+    "evidence": [
+      "10 tools, within the ideal <=12 budget, and the budget is explicitly reasoned in the module docstring — server.py:1-6 ('Tool budget: 10 of the 15-20 recommended maximum')",
+      "Tools are use-case-oriented, not 1:1 REST endpoint mappings: compare_school_holidays (server.py:308), find_common_free_window (server.py:363) and check_date (server.py:252) aggregate/transform upstream data rather than proxying single endpoints",
+      "Anchor queries answerable in 1 call: check_date answers 'is this date a holiday?' in one tool call (server.py:252-304); get_school_holidays answers a range query in one call"
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "ARCH-007",
+    "title": "Capability-Aggregation: Composability intern, Atomarität extern",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "partial",
+    "evidence": [
+      "Tools return self-contained, thought-complete results rather than IDs/pointers requiring follow-up calls — every tool returns a full Pydantic envelope (models.py:59-129); no getXId->getXDetails chaining exists",
+      "Internal aggregation is present: check_date combines school + public holiday lookups (server.py:268-303); compare_school_holidays builds a pairwise overlap matrix internally (server.py:330-359)",
+      "asyncio.gather / parallel fetch is never used; check_date issues its two upstream fetches sequentially (server.py:269-274: await school_holidays then await public_holidays)"
+    ],
+    "gaps": [
+      "check_date performs two sequential awaits that could run in parallel via asyncio.gather"
+    ],
+    "finding": {
+      "observed": "Tools are well-aggregated and atomic from the LLM's perspective (no ID-chaining), but check_date fetches school and public holidays sequentially instead of with asyncio.gather.",
+      "expected": "Where a tool issues multiple independent upstream calls, use asyncio.gather to parallelise them.",
+      "risk": "Minor added latency on check_date (two round-trips serialised); no correctness impact.",
+      "remediation": "Wrap the school_holidays and public_holidays fetches in check_date in a single asyncio.gather.",
+      "effort": "S"
+    }
+  },
+  {
+    "id": "ARCH-008",
+    "title": "Drei Primitive nutzen: Tools, Resources und Prompts",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "fail",
+    "evidence": [
+      "Server exposes Tools only — no @mcp.resource or @mcp.prompt registrations anywhere in src/ (server.py defines 10 @mcp.tool and nothing else)",
+      "No documented justification for tools-only: grep for resource/prompt/primitive across README.md and README.de.md returns zero matches",
+      "Several tools are static, idempotent, side-effect-free read-only lookups that are strong Resource candidates — list_cantons (server.py:104-133) and list_school_types (server.py:136-170) return near-static reference data"
+    ],
+    "gaps": [
+      "Neither of the two-primitives-minimum options is satisfied: no Resources/Prompts and no README rationale for tools-only"
+    ],
+    "finding": {
+      "observed": "The server is Tools-only (10 tools) with no Resources or Prompts, and the READMEs contain no section justifying the tools-only choice.",
+      "expected": "Use at least two of the three MCP primitives, or document in the README why tools-only is appropriate for this phase; evaluate static read-only tools (list_cantons, list_school_types) for Resource migration.",
+      "risk": "Tool-manifest token cost for data that could be cacheable Resources; missed URI-navigability and client caching; audit cannot see a deliberate primitive-choice rationale.",
+      "remediation": "Add a 'MCP Primitives' section to both READMEs justifying tools-only for Phase 1, and/or migrate list_cantons and list_school_types to Resources with a documented URI scheme.",
+      "effort": "M"
+    }
+  },
+  {
+    "id": "ARCH-009",
+    "title": "Tool Annotations: readOnlyHint, destructiveHint, idempotentHint, openWorldHint",
+    "category": "ARCH",
+    "severity": "high",
+    "status": "partial",
+    "evidence": [
+      "All 10 tools carry an explicit annotation and readOnlyHint:True is consistent with their read-only behaviour — server.py:104,136,173,223,251,307,362,420,452,484 (annotations={\"readOnlyHint\": True})",
+      "openWorldHint is omitted on every tool even though all 10 reach external HTTPS APIs (OpenHolidays / Nager.Date) via HolidayClient — e.g. server.py:112-114, and client.py:132-177 issue outbound HTTP",
+      "idempotentHint is omitted on every tool despite all being idempotent reads; README mentions readOnlyHint (README.md:76, :96) but provides no full annotations table/policy"
+    ],
+    "gaps": [
+      "openWorldHint:true missing on all tools although every tool performs external network egress",
+      "idempotentHint:true missing on all (idempotent read-only) tools",
+      "No annotations overview table / policy in README or docs/"
+    ],
+    "finding": {
+      "observed": "Every tool sets readOnlyHint:True correctly, but no tool sets openWorldHint (all 10 make external HTTP calls) or idempotentHint, and there is no annotations policy/table in the docs.",
+      "expected": "Explicit and complete annotations per MCP spec: readOnlyHint (present), openWorldHint:true for the outbound-HTTP tools, idempotentHint:true for idempotent reads, plus an annotations overview in the README.",
+      "risk": "Hosts cannot show a network-egress hint for tools that call external APIs, and lose retry-safe signalling from idempotentHint; the host's UI security/UX signalling is under-specified.",
+      "remediation": "Add openWorldHint:True and idempotentHint:True to all ten annotations (a shared read_only_tool helper avoids drift) and add an annotations table to the README.",
+      "effort": "S"
+    }
+  },
+  {
+    "id": "ARCH-011",
+    "title": "Standardisierte Repo-Struktur (src-Layout, tests, README.de.md)",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "partial",
+    "evidence": [
+      "All mandatory top-level files present (README.md, README.de.md, CHANGELOG.md, LICENSE, pyproject.toml) and directories src/, tests/, .github/workflows/ exist; CI without live tests + publish workflow present (ci.yml, publish.yml, live-tests.yml)",
+      "src-layout is correct and declared: pyproject.toml:44-45 (packages=[\"src/swiss_school_calendar_mcp\"]); README.md and README.de.md have identical parallel top-level section inventory (both 20 '## ' headings, translated 1:1)",
+      "With 10 tools there is no tools/ sub-package — all tools live in a single 506-line server.py (well over the ~200-line guidance), and the src package has no tools/ directory (only server.py, client.py, models.py, constants.py, __main__.py, __init__.py)"
+    ],
+    "gaps": [
+      "Server has >5 tools but they are not split into a tools/ package; server.py is 506 lines vs the <200 guideline",
+      "The single-file layout is not documented as a justified deviation in the README"
+    ],
+    "finding": {
+      "observed": "Repo structure is strong (all mandatory files, correct src-layout, parallel bilingual READMEs, CI+publish workflows), but the 10 tools all live in one 506-line server.py with no tools/ sub-package and no documented rationale for the deviation.",
+      "expected": "Servers with >5 tools split tool bodies into a tools/ package (file per group), keeping server.py to registry/lifecycle (~<200 lines), or document the deviation.",
+      "risk": "Harder code review and weaker test isolation as the tool set grows; minor and purely maintainability-related.",
+      "remediation": "Extract tool groups (lists, holidays, comparison, health) into src/swiss_school_calendar_mcp/tools/*.py, or add a short note in README Project Structure justifying the single-file layout.",
+      "effort": "S"
+    }
+  },
+  {
+    "id": "ARCH-012",
+    "title": "protocolVersion-Pinning + CHANGELOG + SDK-Update-Disziplin",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "fail",
+    "evidence": [
+      "protocolVersion is not pinned: server.py:43 (mcp = FastMCP(\"swiss-school-calendar-mcp\")) passes no protocol_version, and grep for protocol_version across src/ returns nothing — the SDK default is taken",
+      "mcp SDK is pinned as a range not an exact/known-spec version: pyproject.toml:24 (mcp>=1.2.0); CHANGELOG.md is present and Keep-a-Changelog formatted but its entries never reference an MCP spec version (CHANGELOG.md:1-52)",
+      "No 'MCP Protocol Version' section and no update/breaking-change policy in either README (grep protocol/spec.version/breaking in README.md/README.de.md hits only a badge and a Credits line); Dependabot is present (.github/dependabot.yml, weekly pip + actions)"
+    ],
+    "gaps": [
+      "protocolVersion not explicitly pinned in server code (SDK default in use)",
+      "No spec-version references in CHANGELOG entries",
+      "No README section documenting supported MCP protocol version or update/breaking-change policy"
+    ],
+    "finding": {
+      "observed": "protocolVersion is left to the SDK default (never pinned), CHANGELOG and Dependabot exist but no CHANGELOG entry names a spec version and no README documents the supported protocol version or an update policy.",
+      "expected": "Explicit protocolVersion pin in server.py, CHANGELOG entries that note spec-version bumps, and a README 'MCP Protocol Version' section with an update/breaking-change policy.",
+      "risk": "A future mcp SDK upgrade (unbounded by mcp>=1.2.0) could silently change the negotiated protocol version and break clients, with no documented compatibility contract or audit trail.",
+      "remediation": "Pin an explicit protocol version at FastMCP construction, add a 'MCP Protocol Version' + update-policy section to both READMEs, and reference the spec version in CHANGELOG entries; consider an upper bound on the mcp dependency.",
+      "effort": "S"
+    }
+  }
+]

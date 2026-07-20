@@ -1,0 +1,238 @@
+[
+  {
+    "id": "SEC-004",
+    "title": "SSRF-Prevention: HTTPS-Enforcement + IP-Blocklisting",
+    "category": "SEC",
+    "severity": "critical",
+    "status": "partial",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/constants.py:9-10 - upstream bases are hardcoded HTTPS constants OPENHOLIDAYS_BASE='https://openholidaysapi.org' and NAGER_BASE='https://date.nager.at/api/v3'; every request URL is built from these, never from user free-text",
+      "src/swiss_school_calendar_mcp/client.py:132-177 - all request URLs are f-strings over the fixed bases; user-supplied values (canton, dates, language, year) only enter as query params / a numeric path segment, so the host is never attacker-controllable",
+      "src/swiss_school_calendar_mcp/client.py:82-84 - httpx.AsyncClient created with default settings: follow_redirects defaults to False (an upstream 3xx to an internal IP is not followed) and TLS verification defaults on; no explicit scheme validation, no getaddrinfo/ipaddress blocklist, no metadata-IP (169.254.169.254) block, no egress proxy",
+      "src/swiss_school_calendar_mcp/client.py:103,185 - self._http.get(url, ...) is called directly with no pre-request URL/scheme/IP check"
+    ],
+    "gaps": [
+      "No explicit https-scheme assertion before outbound requests (relies on hardcoded constants)",
+      "No resolved-IP blocklist for private/link-local/loopback ranges (169.254.169.254, 127.0.0.0/8, RFC1918, ::1, fe80::/10)",
+      "No DNS-pinning / single-resolution; no egress proxy as defense-in-depth"
+    ],
+    "finding": {
+      "observed": "The server makes outbound GETs only to two hardcoded HTTPS hosts; no tool constructs a URL host from user/LLM free-text, and httpx follow_redirects defaults to False with TLS verification on. However none of the explicit SSRF controls from the spec exist (no scheme validation, no resolved-IP blocklist, no metadata-IP block, no egress proxy).",
+      "expected": "Even with fixed hosts, defense-in-depth: an explicit https-only assertion and a resolved-IP blocklist (or egress proxy) applied before each outbound request, so a future refactor that introduces a user-influenced host, or a redirect/DNS-poisoning edge, cannot reach internal/metadata endpoints.",
+      "risk": "Low in current form because the host is never user-controlled and redirects are disabled; residual risk is a future code change adding a user-influenced URL, or DNS poisoning of the two fixed domains, with no blocklist backstop.",
+      "remediation": "Add a small assert_https_and_public(url) helper (urlparse scheme check + getaddrinfo + ipaddress blocklist for RFC1918/loopback/link-local incl. 169.254.169.254 and ::1/fe80::) and call it in HolidayClient._fetch_with_retry/probe; keep follow_redirects=False explicit.",
+      "effort": "M"
+    }
+  },
+  {
+    "id": "SEC-005",
+    "title": "DNS-Rebinding-Prevention: DNS-Pinning gegen TOCTOU",
+    "category": "SEC",
+    "severity": "high",
+    "status": "partial",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/constants.py:9-10 - target hostnames (openholidaysapi.org, date.nager.at) are compile-time constants and cannot be supplied by a caller, so the classic rebinding precondition (attacker-controlled hostname) is absent",
+      "src/swiss_school_calendar_mcp/client.py:82-84 - httpx.AsyncClient uses default per-request name resolution (no DNS pinning, no custom PinnedTransport); TLS verification is left at its secure default, so a MITM/rebind to an internal IP would fail certificate validation for the real domain",
+      "src/swiss_school_calendar_mcp/client.py:103 - request issued via hostname each call; no single-resolution-then-pin pattern"
+    ],
+    "gaps": [
+      "No DNS pinning / PinnedTransport; httpx resolves the hostname on every request",
+      "No test asserting a single DNS lookup per request"
+    ],
+    "finding": {
+      "observed": "No DNS-pinning implementation exists. The rebinding attack surface is nonetheless negligible because the two hostnames are hardcoded constants (not user-controllable) and default TLS certificate verification would reject a rebind to an unrelated internal IP.",
+      "expected": "For servers matching the spec, DNS resolved once and the pinned IP reused for the TCP connection with original Host/SNI preserved. Here the equivalent protection is provided architecturally (fixed hosts + TLS verify), but no explicit pinning control is present.",
+      "risk": "Very low: an attacker cannot influence the resolved hostname, and TLS verification defeats a rebind to an internal address for the fixed public domains.",
+      "remediation": "Optional defense-in-depth: route outbound calls through a pinning transport or egress proxy shared with the SEC-004 fix; otherwise document that fixed hostnames + TLS verification are the accepted mitigation.",
+      "effort": "M"
+    }
+  },
+  {
+    "id": "SEC-006",
+    "title": "Lokaler Server: stdio-Transport zwingend (Netzwerk-Isolation)",
+    "category": "SEC",
+    "severity": "high",
+    "status": "pass",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/__main__.py:11 - transport = os.environ.get('MCP_TRANSPORT', 'stdio').lower() -> default is stdio",
+      "src/swiss_school_calendar_mcp/__main__.py:13-20 - HTTP/SSE is reached only when MCP_TRANSPORT is explicitly set to sse/streamable-http/http; the else branch runs mcp.run(transport='stdio') opening no TCP port",
+      "README.md:195-211 - primary documented usage is stdio via uvx + claude_desktop_config.json; README.md:213-229 documents cloud SSE/HTTP separately with an env-var table"
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "SEC-007",
+    "title": "Container-Sandboxing: Docker / chroot mit minimalen Privilegien",
+    "category": "SEC",
+    "severity": "high",
+    "status": "partial",
+    "evidence": [
+      "Repository contains no Dockerfile, docker-compose, or k8s/helm manifests (glob for Dockerfile/docker-compose returned none); deployment is local stdio via uvx (README.md:175-211)",
+      "src/swiss_school_calendar_mcp/server.py:104-503 - all 10 tools are readOnlyHint:true and touch only outbound HTTP; no filesystem writes, no subprocess, no secret access, limiting the blast radius of a compromised process",
+      "pyproject.toml:37-38 - single console-script entry point; no build-time code execution hooks"
+    ],
+    "gaps": [
+      "No hardened Dockerfile (non-root USER >=10000, readOnlyRootFilesystem, cap drop ALL, seccomp RuntimeDefault) is provided for the SSE/HTTP deployment path",
+      "No process-level sandbox guidance for the local stdio install"
+    ],
+    "finding": {
+      "observed": "No container image or sandbox configuration is committed. The server runs with full user privileges when launched locally, and no hardened Dockerfile exists for the documented cloud SSE path.",
+      "expected": "A hardened Dockerfile (non-root UID, read-only rootfs, dropped capabilities, seccomp RuntimeDefault) for the network-deployment path, and/or documented sandboxing for local execution.",
+      "risk": "Limited in practice: the server is a read-only Public-Open-Data client with no secrets, no PII, no write/subprocess/filesystem tools, so a compromised process cannot exfiltrate stored data. Residual risk is a supply-chain compromise executing with user privileges (SSH keys, browser cookies) since no sandbox confines it.",
+      "remediation": "Add a multi-stage Dockerfile with USER 10001, drop capabilities, read-only rootfs + tmpfs /tmp for the SSE deployment; note in SECURITY.md that local stdio runs with user privileges and recommend running under a restricted user.",
+      "effort": "S"
+    }
+  },
+  {
+    "id": "SEC-008",
+    "title": "Pre-Configuration Consent für Local-Server-Installation",
+    "category": "SEC",
+    "severity": "medium",
+    "status": "pass",
+    "evidence": [
+      "pyproject.toml:1-3,37-38,44-45 - hatchling build backend with only a [project.scripts] entry point; no setup.py, no custom cmdclass, no pre/postinstall hooks that fetch or execute external resources",
+      "README.md:175-211 - full, ungated install command shown transparently (uvx swiss-school-calendar-mcp; claude_desktop_config.json with command 'uvx'); no hidden one-liner setup script",
+      ".github/workflows/publish.yml:1-45 - PyPI release uses pypa/gh-action-pypi-publish@release/v1 under environment 'pypi' with permissions id-token: write (OIDC Trusted Publisher -> Sigstore attestations), no long-lived token"
+    ],
+    "gaps": [
+      "README does not include an explicit 'no setup scripts run' statement or a sigstore-verify snippet (optional nicety)"
+    ],
+    "finding": null
+  },
+  {
+    "id": "SEC-009",
+    "title": "Session-ID Cryptographic Binding (user_id:session_id)",
+    "category": "SEC",
+    "severity": "critical",
+    "status": "skip",
+    "evidence": [
+      "Server profile auth_model=none; SECURITY.md:31-33 documents 'read-only and requires no API key' with no authentication and no user identity",
+      "No session-management, user_id, OAuth, or session-binding code exists in src/ (no session_id/user_id handling; grep of source shows none); any HTTP session id is handled internally by the FastMCP/MCP SDK",
+      "src/swiss_school_calendar_mcp/__main__.py:1-24 - only transport selection; no per-user state"
+    ],
+    "gaps": [
+      "If the server is ever exposed multi-tenant over HTTP without an auth proxy, SDK-level session handling would become in-scope"
+    ],
+    "finding": null
+  },
+  {
+    "id": "SEC-013",
+    "title": "API-Key-Storage: Secret Manager statt Plain-Text Env-Vars",
+    "category": "SEC",
+    "severity": "high",
+    "status": "pass",
+    "evidence": [
+      "SECURITY.md:31-33 - both upstreams (OpenHolidays, Nager.Date) are keyless public APIs; the server 'requires no API key'",
+      "Source uses os.environ only for non-secret transport config (MCP_TRANSPORT, MCP_HOST, PORT/MCP_PORT) at src/swiss_school_calendar_mcp/__main__.py:11-17; grep for KEY/SECRET/TOKEN/PASSWORD in src/ returns no secret loading",
+      "constants.py:12-14 - only a public User-Agent string; no credentials embedded"
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "SEC-016",
+    "title": "0.0.0.0-Binding-Prevention (NeighborJack)",
+    "category": "SEC",
+    "severity": "critical",
+    "status": "fail",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/__main__.py:16 - mcp.settings.host = os.environ.get('MCP_HOST', '0.0.0.0') -> code default binds ALL interfaces, matching the spec's explicit Fail-Pattern; there is no local-vs-container differentiation and no built-in auth",
+      "README.md:227 - env-var table documents MCP_HOST default as '0.0.0.0'",
+      "SECURITY.md:45-51 - documents the exposure and recommends MCP_HOST=127.0.0.1 or a reverse proxy, but this is a documented opt-in mitigation, not a safe code default",
+      "src/swiss_school_calendar_mcp/__main__.py:11,19-20 - mitigating factor: the 0.0.0.0 bind only occurs when MCP_TRANSPORT is explicitly set to an HTTP transport; the default transport is stdio and opens no port"
+    ],
+    "gaps": [
+      "Code default host is 0.0.0.0 rather than 127.0.0.1 (spec requires default-loopback with container opt-in)",
+      "No Dockerfile setting MCP_HOST=0.0.0.0 explicitly for the container-only case",
+      "No warn-on-dangerous-binding log when binding 0.0.0.0 outside a container"
+    ],
+    "finding": {
+      "observed": "When an HTTP/SSE transport is enabled, the listener binds 0.0.0.0 by default with no authentication. The spec's pass criteria require the code default to be 127.0.0.1 with 0.0.0.0 opt-in only inside a container; here the code default is 0.0.0.0, exactly the documented Fail-Pattern.",
+      "expected": "Default MCP_HOST=127.0.0.1 in code; 0.0.0.0 set only via an explicit Dockerfile/deployment ENV; optional runtime warning when binding all interfaces outside a container.",
+      "risk": "On a laptop in a shared/public network, enabling SSE exposes an unauthenticated MCP server to every host in the subnet (NeighborJack): tools/list + read-only tool calls, upstream data pull, and resource use. Partially mitigated because HTTP is opt-in (stdio is the default and opens no port).",
+      "remediation": "Change default to MCP_HOST=127.0.0.1 in __main__.py; add ENV MCP_HOST=0.0.0.0 in a container image only; update README table; optionally log a warning when host in ('0.0.0.0','::') and no container is detected.",
+      "effort": "S"
+    }
+  },
+  {
+    "id": "SEC-018",
+    "title": "Input-Validation an Tool-Boundaries (Pydantic strict / Zod)",
+    "category": "SEC",
+    "severity": "high",
+    "status": "partial",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/client.py:49-58 - normalise_language() validates language against the SUPPORTED_LANGUAGES whitelist and raises ValueError (good, whitelist-based)",
+      "src/swiss_school_calendar_mcp/server.py:261,467-471 - date inputs are parsed via date.fromisoformat, which raises on malformed values",
+      "src/swiss_school_calendar_mcp/server.py:173-180,223-224,307-310,420-422 - tool arguments are plain str/int/list[str] with no Pydantic input model, no Field(ge/le) numeric bounds, no StringConstraints/pattern, no min/max length, and no model_config strict=True / extra='forbid'; matches the spec Fail-Pattern",
+      "src/swiss_school_calendar_mcp/server.py:224 - year:int is unbounded and flows into f-string URLs (f'{year}-01-01') and into the Nager path /LongWeekend/{year}/CH (client.py:177); count/min_days ints are unbounded; cantons:list[str] has no length cap before an O(n^2) combinations pass (server.py:340)"
+    ],
+    "gaps": [
+      "No numeric range constraints (ge/le) on year, count, min_days",
+      "No length/pattern constraints on canton, school_type, cantons list; canton is not validated against CANTON_CODES before upstream use",
+      "No Pydantic strict input models with extra='forbid' on any tool"
+    ],
+    "finding": {
+      "observed": "Only language (whitelist) and dates (fromisoformat) are validated. All other tool inputs are unconstrained plain str/int/list types: no numeric bounds, no string length/pattern, no strict mode, no extra='forbid'.",
+      "expected": "Each tool argument validated against a strict schema at the boundary: numeric ge/le bounds, string min/max length and whitelist patterns, list size caps, canton codes checked against CANTON_CODES, and model_config {'strict': True, 'extra': 'forbid'}.",
+      "risk": "LLM hallucinations or malformed args can cause unbounded work (e.g. huge cantons lists -> O(n^2) overlap, absurd year/count values) or confusing empty results; low severity given read-only, in-memory, single upstream, but it is missing defense-in-depth.",
+      "remediation": "Introduce Pydantic v2 input models per tool with Field(ge=..., le=...) for year/count/min_days, StringConstraints/length for canton & school_type (validate canton against CANTON_CODES), a max length on cantons, and strict/extra='forbid'.",
+      "effort": "M"
+    }
+  },
+  {
+    "id": "SEC-019",
+    "title": "Lethal Trifecta vermeiden: Server-Separation Read vs Write/Send",
+    "category": "SEC",
+    "severity": "critical",
+    "status": "pass",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/server.py:104,136,173,223,251,307,362,420,452,484 - all 10 tools declare annotations={'readOnlyHint': True}; there is no write/send tool (no smtplib, no POST, no webhook — grep of src/ finds only httpx GET)",
+      "SECURITY.md:31-43 & README.md:270 - server is Public-Open-Data, read-only, no PII, no side effects (no access to private data leg of the trifecta)",
+      "src/swiss_school_calendar_mcp/client.py:103,177,185 - external content is limited to two fixed, trusted public-holiday APIs (no arbitrary web scraping, no user uploads), so the untrusted-content leg is minimal"
+    ],
+    "gaps": [
+      "No explicit written Lethal-Trifecta assessment table in README or docs/ (the spec's documentation checkbox), though the read-only posture is documented"
+    ],
+    "finding": null
+  },
+  {
+    "id": "SEC-020",
+    "title": "Command Injection Prevention: keine os.system, shell=True, eval",
+    "category": "SEC",
+    "severity": "critical",
+    "status": "pass",
+    "evidence": [
+      "grep of src/ for os.system|subprocess|shell=True|eval(|exec(|os.popen returns no matches",
+      "src/swiss_school_calendar_mcp/client.py:94-115,181-202 - all external interaction is via httpx GET; no shell, no subprocess, no dynamic code evaluation",
+      "Server performs no filesystem path operations from user input (no pathlib/os.path construction from tool args)"
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "SEC-021",
+    "title": "Egress-Allow-List: Code-Layer und Network-Layer",
+    "category": "SEC",
+    "severity": "high",
+    "status": "partial",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/constants.py:9-10 - egress is de facto restricted to two fixed hosts because every request URL is built from the hardcoded OPENHOLIDAYS_BASE and NAGER_BASE constants (client.py:132-177); no tool accepts a target host",
+      "No frozenset ALLOWED_HOSTS + assert_host_allowed() pre-request guard exists (grep for allowed_hosts/frozenset in src/ returns none)",
+      "No network-layer egress control committed: no Dockerfile, no k8s NetworkPolicy, no Terraform/security-group, no docs/network-egress.md (glob/grep found none)",
+      "SECURITY.md:57-61 - names the two upstream services in scope but provides no formal egress policy table or update procedure"
+    ],
+    "gaps": [
+      "No explicit code-layer frozenset allow-list with a pre-request host assertion",
+      "No network-layer egress policy (NetworkPolicy / security group / WARP)",
+      "No docs/network-egress.md documenting allowed hosts and an update procedure"
+    ],
+    "finding": {
+      "observed": "Outbound requests are constrained to two hardcoded hosts by construction, but there is no explicit code-layer allow-list guard (frozenset + assert_host_allowed) and no network-layer egress control, and no egress policy documentation.",
+      "expected": "A frozenset ALLOWED_HOSTS checked before each outbound request, plus a network-layer egress restriction for the deployed path, documented in docs/network-egress.md.",
+      "risk": "Low today because hosts are compile-time constants not derived from user input; residual exposure is a compromised image or future code change issuing requests to arbitrary domains with no allow-list or network backstop to catch exfiltration.",
+      "remediation": "Add ALLOWED_HOSTS = frozenset({'openholidaysapi.org','date.nager.at'}) and assert_host_allowed(url) in HolidayClient before each GET; for cloud deployment add a NetworkPolicy/security-group egress rule and a docs/network-egress.md.",
+      "effort": "M"
+    }
+  }
+]
