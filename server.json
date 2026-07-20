@@ -1,0 +1,28 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.malkreide/swiss-school-calendar-mcp",
+  "description": "Swiss school holidays and public holidays for all 26 cantons via OpenHolidays and Nager.Date — differentiated by Schulart (school type), with cross-cantonal overlap and long-weekend tools",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/malkreide/swiss-school-calendar-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/malkreide/swiss-school-calendar-mcp",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "swiss-school-calendar-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeHint": "uvx"
+    }
+  ],
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "category": "Education & Research",
+      "scope": "core"
+    }
+  }
+}
