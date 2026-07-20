@@ -1,47 +1,133 @@
-> **Part of the [Swiss Public Data MCP Portfolio](https://github.com/malkreide/swiss-public-data-mcp)** — a collection of open-source MCP servers connecting AI agents to Swiss public and open data.
+> 🇨🇭 **Part of the [Swiss Public Data MCP Portfolio](https://github.com/malkreide)**
 >
 > This is a **private project**. It is independent of any employer or institutional affiliation and represents no official position of any authority.
 
-# swiss-school-calendar-mcp
+# 📅 swiss-school-calendar-mcp
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-orange.svg)](https://modelcontextprotocol.io/)
-[![Deutsch](https://img.shields.io/badge/Doku-Deutsch-red.svg)](README.de.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-purple)](https://modelcontextprotocol.io/)
+[![No Auth Required](https://img.shields.io/badge/auth-not%20required-lightgrey)](https://github.com/malkreide/swiss-school-calendar-mcp)
+[![Data Source](https://img.shields.io/badge/Data-OpenHolidays%20%2F%20Nager.Date-green)](https://www.openholidaysapi.org/)
 
-MCP server for Swiss **school holidays and public holidays** across all 26 cantons — differentiated by *Schulart* (school type), which matters more than it first appears.
+> MCP server for Swiss **school holidays and public holidays** across all 26 cantons — differentiated by *Schulart* (school type), which matters more than it first appears. No API key required.
 
----
-
-## 🎯 Anchor demo query
-
-> *«In which weeks of 2026 are the compulsory schools of Zurich, Zug and Aargau simultaneously on holiday — and how many overlapping days does each pair share?»*
-
-This exercises `find_common_free_window`, `compare_school_holidays` and `list_school_types` in a single conversation, and answers a question that recurs every planning cycle in inter-cantonal coordination.
+[🇩🇪 Deutsche Version](README.de.md)
 
 ---
 
-## Why this server exists
+## Overview
 
-Swiss school holidays are set cantonally, sometimes at district level, and — in six cantons — **separately per school type**. A federal calendar does not exist. Anyone planning across cantonal borders is currently reduced to opening 26 PDF pages.
+**swiss-school-calendar-mcp** gives AI assistants like Claude direct access to Swiss school and public holiday data for all 26 cantons — no API keys required. School holidays are set cantonally, sometimes at district level, and — in six cantons — **separately per school type**. A federal calendar does not exist; anyone planning across cantonal borders is otherwise reduced to opening 26 PDF pages.
 
-More subtly: the underlying API publishes the *same* holiday period several times when a canton differentiates by school type. That looks like duplicated data and invites naive de-duplication — which would destroy exactly the distinction a school authority needs.
+The server covers two thematic clusters: **school holidays** (with *Schulart* differentiation) and **public holidays / long weekends**. Each cluster maps to a group of purpose-built tools that translate raw agency data into clean, provenance-tagged JSON responses. All data comes from the [OpenHolidays API](https://www.openholidaysapi.org/) (CC BY 4.0) and [Nager.Date](https://date.nager.at/) (MIT).
 
-> **Mnemonic:** *A duplicate in Swiss school data is usually a school type in disguise.*
+> **Mnemonic:** *A duplicate in Swiss school data is usually a school type in disguise.* The underlying API publishes the *same* holiday period several times when a canton differentiates by school type. That looks like duplicated data and invites naive de-duplication — which would destroy exactly the distinction a school authority needs.
+
+**Anchor demo query:** *"In which weeks of 2026 are the compulsory schools of Zurich, Zug and Aargau simultaneously on holiday — and how many overlapping days does each pair share?"*
+→ This exercises `find_common_free_window`, `compare_school_holidays` and `list_school_types` in a single conversation, and answers a question that recurs every planning cycle in inter-cantonal coordination.
+→ [More use cases by audience](EXAMPLES.md) →
 
 ---
 
-## Architecture decision
+## Features
+
+- 🏫 **School holidays** — periods per canton and date range, differentiated by *Schulart* (`VS` / `MS` / `BS` / `EO`)
+- 🎌 **Public holidays** — cantonal holiday sets, not just the federal minimum (Berchtoldstag & friends)
+- 🔍 **Date check** — is a given date a school or public holiday in a canton?
+- 🔗 **Cross-cantonal comparison** — pairwise overlap matrix of holiday days between cantons
+- 🪟 **Common free windows** — date ranges where all listed cantons are simultaneously on holiday
+- 🌉 **Long weekends & bridge days** — computed from federal public holidays (Nager.Date)
+- 🩺 **Source health** — reachability and latency of both upstreams, always evaluable
+- 🔑 **No authentication required** — both data sources are publicly accessible
+- ☁️ **Dual transport** — stdio for Claude Desktop, Streamable HTTP/SSE for cloud deployment
+- 🧾 **Provenance on every response** — `live_api` | `cached` | `degraded`, never a silent empty list
+
+---
+
+## Data Sources
+
+| Source | Data | Licence |
+|---|---|---|
+| [OpenHolidays API](https://www.openholidaysapi.org/) | Cantons, *Schularten*, school holidays, public holidays | CC BY 4.0 |
+| [Nager.Date](https://date.nager.at/) | Long weekends and required bridge days | MIT |
+
+Both sources are publicly accessible, no authentication required.
+**Attribution required:** OpenHolidays (CC BY 4.0) and Nager.Date must be cited as the source when using their data.
+
+---
+
+## Tools
+
+| Tool | Purpose | Data Source |
+|---|---|---|
+| `list_cantons` | The 26 cantons with ISO codes and official languages | OpenHolidays |
+| `list_school_types` | *Schulart* groups per canton (`CH-ZH-VS` etc.) | OpenHolidays |
+| `get_school_holidays` | School holidays for one canton and date range | OpenHolidays |
+| `get_public_holidays` | Public holidays for one canton and year | OpenHolidays |
+| `check_date` | Is a given date a school or public holiday? | OpenHolidays |
+| `compare_school_holidays` | Pairwise overlap matrix across cantons | OpenHolidays |
+| `find_common_free_window` | Windows where all listed cantons are on holiday | OpenHolidays |
+| `next_school_holidays` | The next upcoming holiday periods | OpenHolidays |
+| `get_long_weekends` | Long weekends and required bridge days | Nager.Date |
+| `source_status` | Reachability and latency of both upstreams | Built-in |
+
+All tools are annotated `readOnlyHint: true`. No tool writes anywhere.
+
+### Example Use Cases
+
+| Query | Tool |
+|---|---|
+| *"Which cantons are there, and what are their codes?"* | `list_cantons` |
+| *"Show Zurich's compulsory-school holidays for spring 2026"* | `get_school_holidays` |
+| *"Is 3 April 2026 a public holiday in Ticino?"* | `check_date` |
+| *"Do Zurich and Zug school holidays overlap this year?"* | `compare_school_holidays` |
+| *"When can all of ZH, ZG, AG plan a joint week off school?"* | `find_common_free_window` |
+| *"What are the next holidays for Basel-Stadt schools?"* | `next_school_holidays` |
+| *"Which long weekends does 2026 have, and which bridge days do they need?"* | `get_long_weekends` |
+
+---
+
+## 🛡️ Safety & Limits
+
+| Aspect | Details |
+|--------|---------|
+| **Access** | Read-only (`readOnlyHint: true`) — the server cannot modify or delete any data |
+| **Personal data** | No personal data — all sources are aggregated, public holiday calendars |
+| **Caching** | 12-hour in-memory TTL (holiday tables change a handful of times per year) |
+| **Retry** | Exponential backoff 2s / 4s / 8s; 4xx except 429 are not retried |
+| **Timeout** | 20 seconds per API call (8 seconds for health probes) |
+| **Authentication** | No API keys required — both upstreams are publicly accessible |
+| **Degradation** | Upstream failure yields a `degraded` envelope with an explanatory `note`, never a silent empty list |
+| **Terms of Service** | Subject to the ToS of the respective data sources: [OpenHolidays](https://www.openholidaysapi.org/), [Nager.Date](https://date.nager.at/) |
+
+---
+
+## Architecture
 
 This server uses **Architecture A (live API only, with in-memory cache)**.
 
-Rationale (verified live on 2026-07-19):
+```
+                    ┌──────────────────────────┐
+   Claude / any ───▶│  swiss-school-calendar   │
+   MCP host         │  (FastMCP · 10 tools)    │
+                    └────────┬─────────────────┘
+                             │  retry 2s/4s/8s · 12h cache
+                    ┌────────┴─────────┐
+                    ▼                  ▼
+          OpenHolidays API        Nager.Date
+          (CC BY 4.0)             (MIT)
+          cantons · Schularten    long weekends
+          school + public         bridge days
+```
+
+**Rationale (verified live on 2026-07-19):**
 
 - All ten documented OpenHolidays endpoints answered HTTP 200 with plausible payloads; `/Subdivisions?countryIsoCode=CH` returns exactly 26 cantons, matching the official count.
 - No public bulk dump could be verified at build time (`openpotato/openholidays.data` raw access returned 404), so Architecture B was not available.
 - Holiday tables change a handful of times per year, so a 12-hour in-memory TTL removes almost all upstream load without risking staleness.
 
-Consequences:
+**Consequences:**
 
 - Every response carries `provenance` (`live_api` | `cached` | `degraded`).
 - Upstream failure yields a `degraded` envelope with an explanatory `note`, never a silent empty list.
@@ -75,50 +161,40 @@ Consequences:
 
 ---
 
-## Tools
+## Prerequisites
 
-| Tool | Purpose |
-|---|---|
-| `list_cantons` | The 26 cantons with ISO codes and official languages |
-| `list_school_types` | *Schulart* groups per canton (`CH-ZH-VS` etc.) |
-| `get_school_holidays` | School holidays for one canton and date range |
-| `get_public_holidays` | Public holidays for one canton and year |
-| `check_date` | Is a given date a school or public holiday? |
-| `compare_school_holidays` | Pairwise overlap matrix across cantons |
-| `find_common_free_window` | Windows where all listed cantons are on holiday |
-| `next_school_holidays` | The next upcoming holiday periods |
-| `get_long_weekends` | Long weekends and required bridge days |
-| `source_status` | Reachability and latency of both upstreams |
-
-All tools are annotated `readOnlyHint: true`. No tool writes anywhere.
-
----
-
-## Architecture
-
-```
-                    ┌──────────────────────────┐
-   Claude / any ───▶│  swiss-school-calendar   │
-   MCP host         │  (FastMCP, 10 tools)     │
-                    └────────┬─────────────────┘
-                             │  retry 2s/4s/8s · 12h cache
-                    ┌────────┴─────────┐
-                    ▼                  ▼
-          OpenHolidays API        Nager.Date
-          (CC BY 4.0)             (MIT)
-          cantons · Schularten    long weekends
-          school + public         bridge days
-```
+- Python 3.10 or higher
+- [uv](https://docs.astral.sh/uv/) / uvx (recommended) or pip
+- Internet access (both APIs are publicly available)
 
 ---
 
 ## Installation
 
+Run via [`uv`](https://docs.astral.sh/uv/)'s `uvx` — no clone or manual install needed:
+
 ```bash
 uvx swiss-school-calendar-mcp
 ```
 
+### Development
+
+```bash
+git clone https://github.com/malkreide/swiss-school-calendar-mcp
+cd swiss-school-calendar-mcp
+pip install -e ".[dev]"
+```
+
+---
+
+## Configuration
+
 ### Claude Desktop
+
+Add to `claude_desktop_config.json`:
+
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -131,7 +207,11 @@ uvx swiss-school-calendar-mcp
 }
 ```
 
-### Cloud (Render / Railway)
+Restart Claude Desktop — the server starts automatically on first use.
+
+### Cloud Deployment (SSE / Streamable HTTP for browser access)
+
+For use via **claude.ai in the browser** (e.g. on managed workstations without local software):
 
 ```bash
 MCP_TRANSPORT=sse PORT=8000 python -m swiss_school_calendar_mcp
@@ -139,18 +219,59 @@ MCP_TRANSPORT=sse PORT=8000 python -m swiss_school_calendar_mcp
 
 FastMCP exposes SSE at `/sse`, not `/mcp`.
 
+| Variable | Default | Description |
+|---|---|---|
+| `MCP_TRANSPORT` | `stdio` | Transport: `stdio`, `sse`, `streamable-http` (aka `http`) |
+| `PORT` / `MCP_PORT` | `8000` | Port for HTTP transports |
+| `MCP_HOST` | `0.0.0.0` | Bind address for HTTP transports |
+
+> 💡 *"stdio for the developer laptop, SSE for the browser."*
+
 ---
 
-## Testing
+## Project Structure
 
-```bash
-PYTHONPATH=src pytest tests/ -m "not live"   # offline, respx-mocked
-PYTHONPATH=src pytest tests/ -m live         # hits the real API
+```
+swiss-school-calendar-mcp/
+├── src/
+│   └── swiss_school_calendar_mcp/
+│       ├── __init__.py       # Package init
+│       ├── __main__.py       # Entry point: stdio / SSE / Streamable HTTP
+│       ├── server.py         # FastMCP server, 10 tools
+│       ├── client.py         # HTTP client: retry, 12h in-memory cache, normalisation
+│       ├── constants.py      # Canton codes, Schulart suffixes, API bases
+│       └── models.py         # Pydantic v2 response envelopes
+├── tests/
+│   ├── conftest.py           # respx fixtures
+│   ├── test_tools.py         # Tool unit tests (mocked, no network)
+│   ├── test_resilience.py    # Degradation / retry / cache behaviour
+│   └── test_live.py          # Live smoke tests (marker: live)
+├── pyproject.toml
+├── CHANGELOG.md
+├── CONTRIBUTING.md           # Contributing guide (English)
+├── CONTRIBUTING.de.md        # Contributing guide (German)
+├── SECURITY.md               # Security policy (English)
+├── SECURITY.de.md            # Security policy (German)
+├── EXAMPLES.md               # Use cases by audience
+├── server.json               # MCP registry manifest
+├── LICENSE
+├── README.md                 # This file (English)
+└── README.de.md              # German version
 ```
 
 ---
 
-## Known limitations
+## Lifecycle Phase
+
+This server is in **Phase 1 (read-only)** — all tools read-only, no auth, no side
+effects. The 10-tool budget (of the 15–20 recommended maximum) deliberately leaves
+headroom for a Phase 2 extension: city-level Zurich specifics such as Sechseläuten
+and Knabenschiessen, which are neither public holidays nor school holidays upstream
+and would arrive via [`zurich-opendata-mcp`](https://github.com/malkreide/zurich-opendata-mcp).
+
+---
+
+## Known Limitations
 
 - **Unofficial source.** OpenHolidays aggregates cantonal publications. For legally binding dates, the cantonal authority remains authoritative. Every response says so.
 - **No municipal layer.** Zurich city specifics such as Sechseläuten and Knabenschiessen are neither public holidays nor school holidays upstream, and are therefore absent. Candidate for Phase 2 via `zurich-opendata-mcp`.
@@ -159,10 +280,80 @@ PYTHONPATH=src pytest tests/ -m live         # hits the real API
 
 ---
 
-## Credits & related projects
+## Testing
 
-- Data: [OpenHolidays API](https://www.openholidaysapi.org/) (CC BY 4.0), [Nager.Date](https://date.nager.at/) (MIT)
-- Portfolio: [`zh-education-mcp`](https://github.com/malkreide/zh-education-mcp), [`swiss-statistics-mcp`](https://github.com/malkreide/swiss-statistics-mcp), [`swisstopo-mcp`](https://github.com/malkreide/swisstopo-mcp)
-- Built following the `mcp-data-source-probe` methodology: *live probe before design, dump fallback before API dependency, retry before defeatism.*
+```bash
+# Unit tests (no network required — respx-mocked)
+PYTHONPATH=src pytest tests/ -m "not live"
+
+# Live smoke tests (hits the real upstream APIs)
+PYTHONPATH=src pytest tests/ -m "live"
+
+# Linting
+ruff check src/ tests/
+```
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) (English) · [CONTRIBUTING.de.md](CONTRIBUTING.de.md) (German) for guidelines on reporting bugs, setting up the development environment, code style and test requirements.
+
+This project follows the conventions of the [Swiss Public Data MCP Portfolio](https://github.com/malkreide).
+
+---
+
+## Security
+
+To report a vulnerability, please follow the responsible disclosure process in [SECURITY.md](SECURITY.md) (English) · [SECURITY.de.md](SECURITY.de.md) (German). The server is read-only and requires no API key; see the *Safety & Limits* section above for the security model.
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md)
+
+---
+
+## Deployment for Swiss Public Administration
+
+If you self-host this server for a Swiss school authority or municipal use case:
+
+- **Data residency:** the query patterns themselves (which cantons a civil servant compares) may reveal ongoing planning and are best kept on Swiss or trusted infrastructure.
+- **Upstream calls** go to OpenHolidays (EU-hosted OGD project) and Nager.Date. No personal data leaves your environment; only holiday calendars are requested.
+- **Logging:** logs are written to stderr; configure your IT retention policy accordingly.
+- **HTTP transport** should run behind a reverse proxy with authentication and per-IP rate limits — the server has no built-in authentication.
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE)
+
+Source data is subject to the terms of OpenHolidays (CC BY 4.0) and Nager.Date (MIT); attribution to these sources is required when using their data.
+
+---
+
+## Author
+
+Hayal Oezkan · [github.com/malkreide](https://github.com/malkreide)
+
+---
+
+## Credits & Related Projects
+
+- **Data:** [OpenHolidays API](https://www.openholidaysapi.org/) (CC BY 4.0) · [Nager.Date](https://date.nager.at/) (MIT)
+- **Protocol:** [Model Context Protocol](https://modelcontextprotocol.io/) — Anthropic / Linux Foundation
+- **Built following** the `mcp-data-source-probe` methodology: *live probe before design, dump fallback before API dependency, retry before defeatism.*
+- **Portfolio:** [Swiss Public Data MCP Portfolio](https://github.com/malkreide)
+
+| Server | Description |
+|--------|-------------|
+| [`zh-education-mcp`](https://github.com/malkreide/zh-education-mcp) | Canton of Zurich education data |
+| [`zurich-opendata-mcp`](https://github.com/malkreide/zurich-opendata-mcp) | City of Zurich Open Data |
+| [`swiss-statistics-mcp`](https://github.com/malkreide/swiss-statistics-mcp) | BFS STAT-TAB — Swiss federal statistics |
+| [`swisstopo-mcp`](https://github.com/malkreide/swisstopo-mcp) | Swiss federal geodata (swisstopo) |
 
 MIT licensed. Public money, public code.
+
+<!-- mcp-name: io.github.malkreide/swiss-school-calendar-mcp -->
