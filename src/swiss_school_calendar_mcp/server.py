@@ -13,6 +13,7 @@ Knabenschiessen, which are not public holidays and therefore absent upstream).
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -35,6 +36,7 @@ from .client import (
 from .constants import (
     CANTON_CODES,
     MAX_YEAR,
+    MCP_PROTOCOL_VERSION,
     MIN_YEAR,
     NAGER_BASE,
     OPENHOLIDAYS_BASE,
@@ -304,10 +306,11 @@ async def op_check_date(
     window_to = (target + timedelta(days=40)).isoformat()
 
     try:
-        school_raw, provenance, stamp = await client.school_holidays(
-            window_from, window_to, lang, canton_code
+        # Aggregate the two upstream lookups concurrently (audit ARCH-007).
+        (school_raw, provenance, stamp), (public_raw, _, _) = await asyncio.gather(
+            client.school_holidays(window_from, window_to, lang, canton_code),
+            client.public_holidays(window_from, window_to, lang, canton_code),
         )
-        public_raw, _, _ = await client.public_holidays(window_from, window_to, lang, canton_code)
     except UpstreamError:
         return DateCheckResponse(
             **_degraded("check_date", _OH),
@@ -512,6 +515,7 @@ async def op_source_status(client: HolidayClient) -> StatusResponse:
         source=f"{_OH} | {_NG}",
         provenance="live_api",
         retrieved_at=utc_now_iso(),
+        mcp_protocol_version=MCP_PROTOCOL_VERSION,
         sources=sources,
         all_healthy=all(s.reachable for s in sources),
     )

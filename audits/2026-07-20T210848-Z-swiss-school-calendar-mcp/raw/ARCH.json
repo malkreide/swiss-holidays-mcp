@@ -1,0 +1,197 @@
+[
+  {
+    "id": "ARCH-001",
+    "title": "Tool Naming Convention",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "pass",
+    "evidence": [
+      "server.py:523-667 registers 10 tools, all consistent snake_case: list_cantons, list_school_types, get_school_holidays, get_public_holidays, check_date, compare_school_holidays, find_common_free_window, next_school_holidays, get_long_weekends, source_status. No spaces, dots, brackets or Unicode.",
+      "snake_case is an accepted convention per the check (camelCase preferred, snake_case acceptable); no mixing of conventions anywhere.",
+      "Each @mcp.tool carries a multi-sentence docstring with use-case context, e.g. check_date server.py:594-598 ('Can we schedule the parents' evening on that Thursday?') and list_cantons server.py:525-529 ('Use this first to resolve a canton name to the CH-XX code')."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "ARCH-002",
+    "title": "Tool-Beschreibung mit Use-Case-Tags",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "partial",
+    "evidence": [
+      "Tool descriptions are rich prose docstrings well over the 100-char median, with use-case framing and explicit differentiation (server.py:537-543 list_school_types explains ZH codes; server.py:556-568 get_school_holidays documents Schulart collapse; server.py:610-615 compare_school_holidays justifies the VS default).",
+      "No tool falls under the 50-char floor; the shortest (next_school_holidays, server.py:646) is still a full descriptive sentence."
+    ],
+    "gaps": [
+      "No structured <use_case> / <important_notes> / <example> tags in any description (grep for these tags in src/ returns nothing) — the check asks for a use_case tag or equivalent in >=80% of tools.",
+      "Caveats live in docstring prose rather than a discrete tagged field, so a client that only surfaces the first line loses them."
+    ],
+    "finding": {
+      "observed": "All 10 tools use plain prose docstrings. They carry use-case context and differentiation in natural language but contain no <use_case>/<important_notes>/<example> tags (or any structured equivalent).",
+      "expected": "Descriptions should embed a use_case tag (or equivalent structured marker) in at least 80% of tools, plus important-notes where caveats exist, to maximise semantic separability at tool-selection time.",
+      "risk": "Lower — descriptions are already informative; missing tags marginally reduce embedding-based tool-selection sharpness between the several similar holiday-lookup tools.",
+      "remediation": "Add a short <use_case> block (and <important_notes> where relevant, e.g. the Schulart de-dup caveat) to each tool description; the existing prose can be lifted almost verbatim.",
+      "effort": "S"
+    }
+  },
+  {
+    "id": "ARCH-003",
+    "title": "«Not Found» Anti-Pattern: Heuristiken statt leerer Antworten",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "partial",
+    "evidence": [
+      "No tool returns a bare [] or the string 'No results'. Every path returns a typed Envelope carrying source/provenance/retrieved_at (models.py:17-28).",
+      "op_get_school_holidays sets an explanatory note on empty results (server.py:252-258) distinguishing 'canton does not differentiate this Schulart' from 'range holds no holidays'.",
+      "Unknown canton codes now raise an actionable ValueError pointing at another tool: _require_known_canton server.py:119-126 ('Call list_cantons for the 26 valid CH-XX codes').",
+      "Upstream failure returns a degraded envelope with a retry note rather than silence (_degraded server.py:156-168)."
+    ],
+    "gaps": [
+      "Responses carry no match_type field (exact/fuzzy/none) as the check's pass criteria request.",
+      "No fuzzy-match or suggestion mechanism on empty non-sensitive results; op_get_public_holidays (server.py:269-290) and the computed compare/window tools return empty collections with no note.",
+      "check_date returns is_school_holiday/is_public_holiday=false with matches=[] and no note on an ordinary non-holiday date (definitive, so acceptable, but no match_type signal)."
+    ],
+    "finding": {
+      "observed": "Empty results are wrapped in typed envelopes and the school-holidays path plus unknown-canton path give actionable guidance, but there is no match_type field and no fuzzy/suggestion fallback; several empty paths (public holidays, compare, window) carry no note.",
+      "expected": "Non-sensitive search tools should expose a match_type field and, on empty exact results, offer heuristic/related results or actionable suggestions.",
+      "risk": "Low — the holiday domain is exact-lookup (canton+date), so fuzzy matching is a weak fit; the main anti-pattern (silent []) is already avoided.",
+      "remediation": "Add a match_type field to the list/date envelopes and extend the empty-result note to the public-holidays and compare/window paths for consistency.",
+      "effort": "S"
+    }
+  },
+  {
+    "id": "ARCH-004",
+    "title": "Inversion of Control: Transport-agnostische Server-Logik",
+    "category": "ARCH",
+    "severity": "high",
+    "status": "pass",
+    "evidence": [
+      "Tool handlers take only ctx: Context and obtain the shared client via ctx.request_context.lifespan_context (_client server.py:109-110); grep for request./.headers/stdin/stdout/websocket in server.py returns nothing — no transport internals leak into handlers.",
+      "Business logic lives in transport-agnostic op_* functions (server.py:178-517); tools are thin wrappers, so the same code path serves stdio and HTTP.",
+      "Dual transport is selectable at runtime from a Pydantic-Settings object: __main__.py:37-60 branches on settings.is_http and runs stdio or sse/streamable-http; settings.py:18-35 defines the typed Settings (env_prefix MCP_).",
+      "Shared setup (one httpx.AsyncClient + cache) is created once in the FastMCP lifespan for all transports (server.py:72-82)."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "ARCH-005",
+    "title": "Keine Hardcoded Secrets: Env-Vars / Secret Manager only",
+    "category": "ARCH",
+    "severity": "critical",
+    "status": "pass",
+    "evidence": [
+      "Profile is auth=none / Public Open Data: the server holds no API keys, tokens or connection strings. Pattern search across src/ for api_key/password/secret/token/AKIA/connection-strings yields nothing.",
+      "Settings (settings.py:18-35) carries only transport/host/port/log_level — no secret fields, no os.environ.get defaults with embedded values.",
+      "Logging is structured key=value to stderr with no full-settings dump (logging_setup.py:18-40); no secret is ever formatted into a log line.",
+      ".gitignore contains .env and no .env file is present in the repo."
+    ],
+    "gaps": [
+      "No gitleaks/trufflehog secret-scan runs in CI (ci.yml has pip-audit only) — but there are no secrets in this server for such a scan to protect, so impact is nil."
+    ],
+    "finding": null
+  },
+  {
+    "id": "ARCH-006",
+    "title": "Tool-Budget: High-Level-Use-Cases statt API-Mapping 1:1",
+    "category": "ARCH",
+    "severity": "high",
+    "status": "pass",
+    "evidence": [
+      "10 tools exposed (server.py:523-667), within the 9-15 'check clusters' band and below the server's own documented 15-20 budget; rationale is stated in the module docstring (server.py:9-12) and README 'Lifecycle Phase'.",
+      "No 1:1 REST mapping: aggregating use-case tools exist — compare_school_holidays builds a pairwise overlap matrix (op_compare_school_holidays server.py:343-391) and find_common_free_window intersects day-sets across cantons (op_find_common_free_window server.py:394-443).",
+      "Anchor demo query (ZH/ZG/AG simultaneous holidays) is answerable in 1-2 tool calls, per README:28-29."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "ARCH-007",
+    "title": "Capability-Aggregation: Composability intern, Atomarität extern",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "pass",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/server.py:308-313 — op_check_date now runs the school_holidays + public_holidays upstream lookups concurrently via asyncio.gather(...), satisfying the 'wo Aggregation Sinn ergibt, parallelisieren' criterion (was sequential/partial before).",
+      "src/swiss_school_calendar_mcp/server.py:334-343 — the check_date result is gedanklich abgeschlossen: DateCheckResponse carries is_school_holiday, is_public_holiday and the merged matches list, so one tool call answers the user's question without follow-up chaining.",
+      "src/swiss_school_calendar_mcp/server.py:590-603 — check_date tool docstring frames the atomic use-case ('Can we schedule the parents' evening on that Thursday?'), the only tool that aggregates two sources; description reflects the abgeschlossene operation (ARCH-002 synergy).",
+      "src/swiss_school_calendar_mcp/server.py:271-292, 346-394, 397-446 — compare/find_common/public/school tools each make a single upstream call and return self-contained envelopes (counts/rows/windows), not IDs or pointers requiring a second call; no internal helper tools are exposed.",
+      "src/swiss_school_calendar_mcp/models.py:67-77 — response models return full holiday period objects, not bare IDs, confirming no LLM-side chaining is forced."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "ARCH-008",
+    "title": "Drei Primitive nutzen: Tools, Resources und Prompts",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "pass",
+    "evidence": [
+      "Server is deliberately Tools-only and this is documented and justified in README 'MCP Primitives & Protocol Version' (README.md:284-297): Phase 1 read-only wrapper, Resources deferred to Phase 2 with a concrete future URI scheme (holidays://<canton>/<year>), Prompts omitted for lack of recurring templated workflows.",
+      "README.de.md carries the parallel section 'MCP-Primitive & Protokoll-Version', so the justification exists bilingually.",
+      "The check explicitly accepts a documented, reasoned Tools-only choice in place of using multiple primitives."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "ARCH-009",
+    "title": "Tool Annotations: readOnlyHint, destructiveHint, idempotentHint, openWorldHint",
+    "category": "ARCH",
+    "severity": "high",
+    "status": "pass",
+    "evidence": [
+      "Every @mcp.tool passes annotations=_RO (server.py:523,533,547,574,586,602,619,638,650,660) — all 10 tools, no defaults-by-omission.",
+      "_RO sets all four hints explicitly: readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True (server.py:89-94), consistent with the actual behaviour: every tool is a plain idempotent GET against an external API and writes nothing.",
+      "Annotations are documented in the README Tools section (README.md:76) and Safety & Limits table (README.md:96), matching the code."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "ARCH-011",
+    "title": "Standardisierte Repo-Struktur (src-Layout, tests, README.de.md)",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "partial",
+    "evidence": [
+      "All mandatory top-level files present: README.md, README.de.md, CHANGELOG.md, LICENSE, pyproject.toml; mandatory dirs present: src/, tests/, .github/workflows/ (ci.yml, live-tests.yml, publish.yml).",
+      "Correct src-layout: src/swiss_school_calendar_mcp/ with pyproject [tool.hatch.build.targets.wheel] packages = ['src/swiss_school_calendar_mcp'] (pyproject.toml:45-46).",
+      "README.de.md is at full section parity with README.md (23 top-level ## sections map one-to-one, verified by diff of the heading inventories).",
+      "Cross-cutting concerns are already split into modules: guard.py, settings.py, logging_setup.py, client.py, constants.py, models.py."
+    ],
+    "gaps": [
+      "All 10 tools plus their op_* logic live in a single server.py of 670 lines; the check asks for a tools/ subdirectory (file-per-group) once a server exposes >5 tools and for server.py to stay near ~200 lines (registry/lifecycle only).",
+      "This deviation from the standard layout is not explicitly justified in the README."
+    ],
+    "finding": {
+      "observed": "Repo layout, mandatory files, src-layout, CI workflows and README.de.md parity all conform, but the 10 tools and their logic sit in one 670-line server.py with no tools/ package split, and the deviation is undocumented.",
+      "expected": "With >5 tools, tools should be grouped under a tools/ directory (file per group) leaving server.py as a thin registry/lifecycle module (~200 lines), or the deviation should be justified in the README.",
+      "risk": "Low — organisational only; the module is well-structured (op_* logic separated from thin wrappers) but review/test isolation is harder in one large file.",
+      "remediation": "Split tools into src/swiss_school_calendar_mcp/tools/ by cluster (school / public+longweekend / compare+window / status) or add a short README note justifying the single-file layout.",
+      "effort": "S"
+    }
+  },
+  {
+    "id": "ARCH-012",
+    "title": "protocolVersion-Pinning + CHANGELOG + SDK-Update-Disziplin",
+    "category": "ARCH",
+    "severity": "medium",
+    "status": "pass",
+    "evidence": [
+      "src/swiss_school_calendar_mcp/constants.py:18-21 — MCP_PROTOCOL_VERSION = \"2025-06-18\" is an explicit pin (no 'latest', no implicit default), with a comment documenting that the SDK negotiates the wire version and this constant is surfaced explicitly.",
+      "src/swiss_school_calendar_mcp/models.py:127-130 — StatusResponse gained an mcp_protocol_version field (was a dead constant before); it is now part of the public tool schema.",
+      "src/swiss_school_calendar_mcp/server.py:508-521 — op_source_status populates mcp_protocol_version=MCP_PROTOCOL_VERSION, so the pinned version is actually surfaced at runtime (closes the prior 'dead constant, not surfaced' partial).",
+      "README.md:284-297 — 'MCP Primitives & Protocol Version' section states the server is built/tested against 2025-06-18, names the pin location and source_status surfacing, and documents the update policy (Dependabot + CHANGELOG version bumps).",
+      "CHANGELOG.md:1-11 — Keep-a-Changelog format declared (line 4), [0.2.0] release explicitly records 'MCP protocol version tested against 2025-06-18'.",
+      "pyproject.toml:24 — mcp pinned to '>=1.2.0,<2', bounding the SDK/spec surface.",
+      ".github/dependabot.yml:1-19 — Dependabot active with weekly pip + github-actions update PRs (>= the required monthly cadence)."
+    ],
+    "gaps": [
+      "Minor/non-blocking: MCP_PROTOCOL_VERSION is surfaced via source_status but is not passed to the FastMCP(...) constructor at server.py:84 — current FastMCP does not accept a protocol_version argument, so actual wire negotiation still relies on the pinned mcp SDK. All six pass criteria are substantively met; this is an SDK limitation, not a maintainer omission."
+    ],
+    "finding": null
+  }
+]

@@ -1,0 +1,207 @@
+[
+  {
+    "id": "SEC-004",
+    "title": "SSRF-Prevention: HTTPS-Enforcement + IP-Blocklisting",
+    "category": "SEC",
+    "severity": "critical",
+    "status": "pass",
+    "evidence": [
+      "guard.py:38-46 assert_host_allowed enforces parsed.scheme == 'https' and host membership in the frozen ALLOWED_HOSTS before any socket is opened.",
+      "guard.py:66-79 assert_resolved_ip_safe does a single socket.getaddrinfo and rejects any resolved address that is_private/is_loopback/is_link_local/is_multicast/is_reserved/is_unspecified.",
+      "guard.py:26,49-51 explicit cloud-metadata blocklist _METADATA_IPS = {'169.254.169.254','fd00:ec2::254'} on top of the range checks; IPv6 loopback (::1) and link-local (fe80::/10) covered by is_loopback/is_link_local.",
+      "client.py:117-119 both guards are invoked at the top of _fetch_with_retry before every GET; client.py:237-238 same in probe().",
+      "client.py:57-63 build_http_client sets follow_redirects=False so a 3xx cannot bounce the request off an allow-listed host."
+    ],
+    "gaps": [
+      "Full TOCTOU-free DNS pinning is not implemented: the guard resolves once for the check, but httpx re-resolves at connect time (documented accepted residual risk, docs/network-egress.md:42-50). Mitigated by the 2-host frozen allow-list + IP blocklist + TLS cert validation. This is the specific concern tracked under SEC-005.",
+      "No production egress-proxy (Smokescreen) as defense-in-depth — not applicable to the default local-stdio deployment."
+    ],
+    "finding": null
+  },
+  {
+    "id": "SEC-005",
+    "title": "DNS-Rebinding-Prevention: DNS-Pinning gegen TOCTOU",
+    "category": "SEC",
+    "severity": "high",
+    "status": "partial",
+    "evidence": [
+      "__main__.py:18-34 _http_security builds TransportSecuritySettings(enable_dns_rebinding_protection=True, allowed_hosts=..., allowed_origins=...) and __main__.py:54 wires it into mcp.settings.transport_security — inbound (browser-driven) DNS-rebinding protection is enabled for the HTTP transport.",
+      "guard.py:66-79 outbound path resolves the host a single time (one getaddrinfo) and range-checks the result before the request.",
+      "docs/network-egress.md:42-50 documents the outbound residual risk as consciously accepted, with compensating controls (2-host allow-list, TLS cert validation, IP blocklist) and recommends a network-layer egress policy for hardened deployments."
+    ],
+    "gaps": [
+      "The core control SEC-005 requires — outbound DNS pinning (reusing the resolved IP for the actual TCP connection with Host-header/SNI preservation) — is NOT implemented; httpx re-resolves at connect time, leaving a TOCTOU window.",
+      "None of the SEC-005 outbound pass-criteria (pinned IP for connection, Host-header/SNI on original hostname, test asserting exactly 1 DNS call) are met.",
+      "Inbound TransportSecuritySettings mitigates a different (inbound) rebinding vector, not the outbound one this check scores."
+    ],
+    "finding": {
+      "summary": "Outbound DNS pinning is absent; httpx re-resolves the allow-listed hostname at connect time, so the guard's single-resolution IP check can be bypassed by a rebinding resolver (TOCTOU).",
+      "failure_scenario": "If DNS for openholidaysapi.org or date.nager.at were poisoned with a low-TTL record that returns a public IP during guard.assert_resolved_ip_safe's getaddrinfo but a private/metadata IP during httpx's own connect-time resolution, the outbound request would reach the internal target despite the guard passing.",
+      "file": "src/swiss_school_calendar_mcp/guard.py",
+      "line": 66,
+      "category": "dns-rebinding",
+      "verdict": "CONFIRMED",
+      "remediation": "Pin the resolved IP into the connection (custom httpx transport/resolver reusing the vetted address with SNI+Host preserved) or place a network-layer egress policy restricting egress to the two hosts. Currently accepted as documented residual risk."
+    }
+  },
+  {
+    "id": "SEC-006",
+    "title": "Lokaler Server: stdio-Transport zwingend (Netzwerk-Isolation)",
+    "category": "SEC",
+    "severity": "high",
+    "status": "pass",
+    "evidence": [
+      "settings.py:21 transport defaults to 'stdio'; __main__.py:41,58-60 falls through to mcp.run(transport='stdio') unless settings.is_http, so the default start opens no TCP port.",
+      "settings.py:29-31 is_http is true only for explicit sse/streamable-http/http, i.e. HTTP transport is opt-in via MCP_TRANSPORT.",
+      "README.md:193-211 documents the local stdio + Claude Desktop (uvx) use case as primary; README.md:214-229 documents the HTTP/cloud case separately with a security note (README.md:356)."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "SEC-007",
+    "title": "Container-Sandboxing: Docker / chroot mit minimalen Privilegien",
+    "category": "SEC",
+    "severity": "high",
+    "status": "pass",
+    "evidence": [
+      "Dockerfile:2-7 / 9-14 is a multi-stage build (build stage installs to --prefix=/install, runtime stage copies only the install tree).",
+      "Dockerfile:11 useradd --uid 10001 appuser and Dockerfile:13 USER appuser — the process runs non-root with UID >= 10000, satisfying the applicable pass criterion.",
+      "Dockerfile:17-22 sets MCP_HOST=0.0.0.0 only inside the container with an inline comment explaining the container is already network-isolated and must sit behind an authenticating reverse proxy."
+    ],
+    "gaps": [
+      "readOnlyRootFilesystem, capabilities drop ALL, seccompProfile and runAsNonRoot are Kubernetes securityContext controls; no k8s/Helm manifest exists (deployment is local-stdio + optional Docker), so those criteria are not applicable in-repo.",
+      "No HEALTHCHECK directive (minor; the healthz probe is optional for stdio-first)."
+    ],
+    "finding": null
+  },
+  {
+    "id": "SEC-008",
+    "title": "Pre-Configuration Consent für Local-Server-Installation",
+    "category": "SEC",
+    "severity": "medium",
+    "status": "pass",
+    "evidence": [
+      "pyproject.toml:1-3 build-backend = hatchling and pyproject.toml:38-39 [project.scripts] uses a plain entry point (__main__:main); no [tool.setuptools.cmdclass], no pre/postinstall hooks, no dynamic code loading at install.",
+      "README.md:202-211 shows the full, ungekürzt uvx installation command (command 'uvx', args ['swiss-school-calendar-mcp']) transparently in claude_desktop_config.json.",
+      ".github/workflows/publish.yml:32-50 publishes via OIDC Trusted Publisher (environment: pypi, permissions id-token: write, pypa/gh-action-pypi-publish@release/v1) — no long-lived API token, Sigstore attestation."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "SEC-009",
+    "title": "Session-ID Cryptographic Binding (user_id:session_id)",
+    "category": "SEC",
+    "severity": "critical",
+    "status": "n/a",
+    "evidence": [
+      "Profile: auth = none. The server has no authentication model and no user identity (docs/security.md:26-33, README.md:356), so there is no validated OAuth sub-claim to bind a session to.",
+      "All 10 tools are read-only over Public Open Data (server.py:87-94 _RO annotations); hijacking an unauthenticated read-only session yields no private data, no write and no privilege escalation.",
+      "Session-ID generation is delegated to the pinned MCP SDK (constants.py:21 MCP_PROTOCOL_VERSION 2025-06-18); no custom weak PRNG session IDs are minted in this codebase."
+    ],
+    "gaps": [
+      "If an authenticated/stateful mode is added later, user_id-to-session binding per SEC-009 would become required."
+    ],
+    "finding": null
+  },
+  {
+    "id": "SEC-013",
+    "title": "API-Key-Storage: Secret Manager statt Plain-Text Env-Vars",
+    "category": "SEC",
+    "severity": "high",
+    "status": "pass",
+    "evidence": [
+      "No secrets exist: both upstreams (openholidaysapi.org, date.nager.at) are keyless; grep of src/ for os.environ/os.getenv on KEY/SECRET/TOKEN returns nothing (only a docstring mention in settings.py:4). All config flows through the typed Settings object (settings.py:18-27, MCP_ prefix, non-secret).",
+      "docs/security.md:54-58 and SECURITY.md:31 document that the server is read-only and needs no API key — the Stufe-0 (no secret) case, which exceeds the 'Stufe 1 documented' minimum for Public Open Data.",
+      "Dockerfile carries no ENV secret layer (Dockerfile:17-19 only sets non-secret transport/host/port), so a docker history dump exposes no credential."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "SEC-016",
+    "title": "0.0.0.0-Binding-Prevention (NeighborJack)",
+    "category": "SEC",
+    "severity": "critical",
+    "status": "pass",
+    "evidence": [
+      "settings.py:22-25 host = Field(default='127.0.0.1', ...) — the code default bind address is loopback, the primary SEC-016 pass criterion.",
+      "settings.py:33-35 binds_all_interfaces detects 0.0.0.0/'::'; __main__.py:42-51 logs a 'binding_all_interfaces' warning with a hint to use a reverse proxy or MCP_HOST=127.0.0.1 when a public interface is chosen.",
+      "Dockerfile:16-22 sets MCP_HOST=0.0.0.0 explicitly and only inside the container, with a comment documenting that the container is network-isolated and the intended case."
+    ],
+    "gaps": [
+      "README.md:227 env-var table lists MCP_HOST default as '0.0.0.0', which contradicts the actual code default of 127.0.0.1 (settings.py:22). Documentation inconsistency only; the code default — the pass criterion — is correct. Recommend correcting the table to 127.0.0.1 (container override noted separately)."
+    ],
+    "finding": null
+  },
+  {
+    "id": "SEC-018",
+    "title": "Input-Validation an Tool-Boundaries (Pydantic strict / Zod)",
+    "category": "SEC",
+    "severity": "high",
+    "status": "pass",
+    "evidence": [
+      "server.py:96-103 defines Annotated Field constraints for every tool argument: CantonCode pattern ^[A-Za-z]{2}-[A-Za-z]{2}$, IsoDate pattern ^\\d{4}-\\d{2}-\\d{2}$, Year Field(ge=MIN_YEAR, le=MAX_YEAR), SchoolTypeCode pattern ^(?i:VS|MS|BS|EO)$, Language pattern ^(?i:DE|FR|IT|EN)$ — all whitelist (anchored) patterns.",
+      "server.py:624 min_days Annotated[int, Field(ge=1, le=90)] and server.py:642 count Annotated[int, Field(ge=1, le=20)] — numeric fields are bounded, no unbounded ranges.",
+      "server.py:119-126 _require_known_canton normalises and validates the canton against the 26-entry CANTON_CODES tuple and raises ValueError for unknown codes; client.py:70-79 normalise_language raises on unsupported languages before any request."
+    ],
+    "gaps": [
+      "Tool args use FastMCP function-signature validation (Annotated Field) rather than an explicit BaseModel with model_config={'strict': True, 'extra': 'forbid'}, so strict-mode coercion suppression and extra-field forbidding are not explicitly asserted. In practice every argument carries a whitelist pattern or numeric bound plus semantic validation, so the exploitable surface is minimal."
+    ],
+    "finding": null
+  },
+  {
+    "id": "SEC-019",
+    "title": "Lethal Trifecta vermeiden: Server-Separation Read vs Write/Send",
+    "category": "SEC",
+    "severity": "critical",
+    "status": "pass",
+    "evidence": [
+      "docs/security.md:40-45 contains an explicit lethal-trifecta assessment: only the 'private data' leg is present in the weakest sense (public data), no act/exfiltrate leg and no actionable untrusted-instruction ingestion — trifecta not present.",
+      "server.py:87-94 all 10 tools carry _RO annotations (readOnlyHint True, destructiveHint False) and are plain GET wrappers; grep of src/ for send_mail/smtplib/httpx.post/requests.post/.post/slack/webhook returns nothing — no external communication capability.",
+      "constants.py:16 outbound targets are a 2-host frozenset of public open-data APIs; no tool builds a URL from free-text input (docs/network-egress.md:27-28)."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "SEC-020",
+    "title": "Command Injection Prevention: keine os.system, shell=True, eval",
+    "category": "SEC",
+    "severity": "critical",
+    "status": "pass",
+    "evidence": [
+      "grep of src/ for os.system(|shell=True|eval(|exec(|os.popen(|subprocess returns no matches — the server spawns no subprocesses and evaluates no dynamic code.",
+      "All external interaction is via httpx GETs in client.py (client.py:126,239) with parametrised query dicts (client.py:184-229), not shell strings.",
+      "Filesystem/path handling: the server does no path construction from user input (no os.path.join+concat, no dynamic file operations in src/)."
+    ],
+    "gaps": [],
+    "finding": null
+  },
+  {
+    "id": "SEC-021",
+    "title": "Egress-Allow-List: Code-Layer und Network-Layer",
+    "category": "SEC",
+    "severity": "high",
+    "status": "partial",
+    "evidence": [
+      "constants.py:12-16 ALLOWED_HOSTS = frozenset({'openholidaysapi.org','date.nager.at'}) — immutable code-layer allow-list, not env/config-mutable.",
+      "client.py:117-119 guard.assert_host_allowed(url) is called before every outbound GET in _fetch_with_retry, and client.py:237 in probe(); guard.py:33-46 enforces HTTPS + membership.",
+      "docs/network-egress.md:6-34 documents the allow-list, the two hosts and their purpose, and a code-change+review+CHANGELOG update procedure for extending it."
+    ],
+    "gaps": [
+      "The check explicitly requires BOTH layers ('Code-only ist unzureichend'). The network-layer egress control (Kubernetes NetworkPolicy / AWS Security Group / Cloudflare WARP) is NOT implemented — no k8s/Terraform manifest exists in the repo; docs/network-egress.md:44-50 only recommends it as defense-in-depth for a hardened deployment.",
+      "Consistent with the local-stdio + optional-Docker deployment profile there is no orchestration layer in-repo to host a NetworkPolicy, so the network layer is left to the operator at deploy time."
+    ],
+    "finding": {
+      "summary": "Egress control is code-layer only; the second (network-layer) egress restriction that SEC-021 mandates is documented as recommended but not shipped in the repo.",
+      "failure_scenario": "If the container image or process were compromised so the in-process assert_host_allowed check is bypassed or removed, nothing at the network layer would stop outbound connections to arbitrary hosts, enabling data exfiltration via an attacker-controlled destination.",
+      "file": "docs/network-egress.md",
+      "line": 44,
+      "category": "egress-control",
+      "verdict": "CONFIRMED",
+      "remediation": "Ship a network-layer egress policy for containerised/cloud deployments (NetworkPolicy or security-group egress restricted to the two hosts on 443 plus DNS). Acceptable to remain code-layer-only for the default local-stdio deployment; document that the network layer is an operator responsibility."
+    }
+  }
+]

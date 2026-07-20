@@ -224,7 +224,7 @@ FastMCP exponiert SSE unter `/sse`, nicht unter `/mcp`.
 |---|---|---|
 | `MCP_TRANSPORT` | `stdio` | Transport: `stdio`, `sse`, `streamable-http` (bzw. `http`) |
 | `PORT` / `MCP_PORT` | `8000` | Port für HTTP-Transporte |
-| `MCP_HOST` | `0.0.0.0` | Bind-Adresse für HTTP-Transporte |
+| `MCP_HOST` | `127.0.0.1` | Bind-Adresse für HTTP-Transporte. Standardmässig Loopback; `0.0.0.0` ist Opt-in und erzeugt eine Warnung — hinter authentifizierendem Reverse Proxy betreiben. |
 
 > 💡 *«stdio für den Entwickler-Laptop, SSE für den Browser.»*
 
