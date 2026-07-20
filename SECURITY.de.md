@@ -48,14 +48,20 @@ Dieser Server ist **nur lesend** und benötigt **keinen API-Key**:
 
 ### Härtung beim Deployment
 
-- Der HTTP/SSE-Transport bindet standardmässig `0.0.0.0` (`MCP_HOST`). Der
-  Server hat **keine eingebaute Authentifizierung**.
-- Für alles ausser lokaler/stdio-Nutzung **`MCP_HOST=127.0.0.1`** setzen, um
-  auf Loopback zu beschränken, oder den Server **hinter einem Reverse Proxy
-  mit Authentifizierung und per-IP-Rate-Limit** betreiben (z.B. nginx mit
-  `limit_req` + OAuth2-Proxy).
-- Logs werden auf **stderr** geschrieben. Prüfen Sie Ihre
-  Aufbewahrungsrichtlinie, bevor Sie ausführliches Logging aktivieren.
+- Der HTTP/SSE-Transport bindet standardmässig **`127.0.0.1` (Loopback)**
+  (`MCP_HOST`). Ein öffentliches Binding (`MCP_HOST=0.0.0.0`) ist ein
+  ausdrückliches Opt-in und erzeugt beim Start eine Warnung — der Server hat
+  **keine eingebaute Authentifizierung**.
+- Für Nicht-Loopback-Betrieb den Server **hinter einem Reverse Proxy mit
+  Authentifizierung und per-IP-Rate-Limit** betreiben (z.B. nginx mit
+  `limit_req` + OAuth2-Proxy). Für den HTTP-Transport ist DNS-Rebinding-Schutz
+  (Host/Origin-Allow-List) aktiv.
+- **Egress:** ausgehende Requests sind auf eine Zwei-Host-HTTPS-Allow-List mit
+  SSRF-IP-Blocklist beschränkt — siehe [`docs/network-egress.md`](docs/network-egress.md).
+- Logs werden auf **stderr** geschrieben und enthalten keine Request-Bodies
+  oder Personendaten. Prüfen Sie Ihre Aufbewahrungsrichtlinie, bevor Sie
+  ausführliches Logging aktivieren.
+- Vollständige Sicherheitsarchitektur: [`docs/security.md`](docs/security.md).
 
 ## Geltungsbereich
 

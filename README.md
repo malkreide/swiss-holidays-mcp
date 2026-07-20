@@ -73,7 +73,7 @@ Both sources are publicly accessible, no authentication required.
 | `get_long_weekends` | Long weekends and required bridge days | Nager.Date |
 | `source_status` | Reachability and latency of both upstreams | Built-in |
 
-All tools are annotated `readOnlyHint: true`. No tool writes anywhere.
+All tools carry the full annotation set — `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: true` (they reach an external API). No tool writes anywhere. Inputs are schema-validated (canton codes against the 26 known cantons, dates as `YYYY-MM-DD`, `year` bounded, `language`/`school_type` whitelisted).
 
 ### Example Use Cases
 
@@ -238,15 +238,21 @@ swiss-school-calendar-mcp/
 │   └── swiss_school_calendar_mcp/
 │       ├── __init__.py       # Package init
 │       ├── __main__.py       # Entry point: stdio / SSE / Streamable HTTP
-│       ├── server.py         # FastMCP server, 10 tools
-│       ├── client.py         # HTTP client: retry, 12h in-memory cache, normalisation
-│       ├── constants.py      # Canton codes, Schulart suffixes, API bases
+│       ├── server.py         # FastMCP server: lifespan, 10 tools, op_* logic
+│       ├── client.py         # Shared HTTP client: retry, 12h cache, egress guard
+│       ├── guard.py          # Egress / SSRF guard (HTTPS + allow-list + IP blocklist)
+│       ├── settings.py       # Pydantic-Settings config (loopback default)
+│       ├── logging_setup.py  # Structured logging to stderr
+│       ├── constants.py      # Canton codes, Schulart suffixes, API bases, allow-list
 │       └── models.py         # Pydantic v2 response envelopes
 ├── tests/
 │   ├── conftest.py           # respx fixtures
 │   ├── test_tools.py         # Tool unit tests (mocked, no network)
 │   ├── test_resilience.py    # Degradation / retry / cache behaviour
 │   └── test_live.py          # Live smoke tests (marker: live)
+├── docs/                     # roadmap.md, security.md, network-egress.md
+├── audits/                   # mcp-audit run artifacts
+├── Dockerfile                # Non-root multi-stage container
 ├── .github/
 │   ├── dependabot.yml        # Weekly dependency / action update PRs
 │   └── workflows/            # ci.yml, live-tests.yml, publish.yml
@@ -274,6 +280,27 @@ and Knabenschiessen, which are neither public holidays nor school holidays upstr
 and would arrive via [`zurich-opendata-mcp`](https://github.com/malkreide/zurich-opendata-mcp).
 
 ---
+
+## MCP Primitives & Protocol Version
+
+- **Primitives — Tools only (deliberate).** This is a Phase 1 read-only wrapper
+  whose entire surface is idempotent, side-effect-free `GET`s. Modelling them as
+  **Resources** was considered and deferred: a stable URI scheme
+  (`holidays://<canton>/<year>`) is a Phase 2 item once the municipal layer
+  lands. There are no recurring templated workflows, so **Prompts** are not
+  used. This choice is revisited when the server reaches Phase 2.
+- **MCP protocol version.** Built and tested against protocol version
+  `2025-06-18` (pinned as `MCP_PROTOCOL_VERSION` and surfaced by `source_status`).
+  The wire version is negotiated by the pinned `mcp` SDK (`mcp>=1.2.0,<2`).
+- **Update policy.** SDK and dependency bumps land via Dependabot (weekly);
+  protocol-version or tool-definition changes are recorded in
+  [`CHANGELOG.md`](CHANGELOG.md) with a version bump.
+
+## Data classification
+
+All data is **Öffentlich / Public Open Data** — aggregated holiday calendars,
+no personal data (DSG/DSGVO). This is the highest classification the server
+handles; the full model is in [`docs/security.md`](docs/security.md).
 
 ## Known Limitations
 

@@ -1,4 +1,4 @@
-"""HTTP access layer: retry, in-memory cache, and payload normalisation.
+"""HTTP access layer: retry, in-memory cache, egress guard and normalisation.
 
 Design notes from the live probe (2026-07-19):
 
@@ -9,6 +9,11 @@ Design notes from the live probe (2026-07-19):
   We validate the language locally before sending it.
 * Missing required parameters produce a RFC-9110 problem+json body with HTTP
   400. Those are client errors and must not be retried.
+
+Lifecycle (audit SDK-001): in production a single ``HolidayClient`` is created
+in the server lifespan with a shared ``httpx.AsyncClient`` and a persistent
+cache; tools reuse it rather than opening a client per call. The ``async with``
+form is kept for tests, where it owns and closes its own client.
 """
 
 from __future__ import annotations
@@ -17,9 +22,11 @@ import asyncio
 import time
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
+from . import guard
 from .constants import (
     ATTRIBUTION_NAGER,
     ATTRIBUTION_OPENHOLIDAYS,
@@ -29,17 +36,31 @@ from .constants import (
     SUPPORTED_LANGUAGES,
     USER_AGENT,
 )
+from .logging_setup import get_logger
 
 MAX_ATTEMPTS = 4
 CACHE_TTL_SECONDS = 60 * 60 * 12  # holiday tables change a few times per year
+REQUEST_TIMEOUT = 20.0
+PROBE_TIMEOUT = 8.0
+
+_log = get_logger()
 
 
 class UpstreamError(RuntimeError):
-    """Upstream unreachable after all retries."""
+    """Upstream unreachable after all retries (message is log-safe, no internals)."""
 
 
 class UpstreamEmpty(RuntimeError):
     """Upstream answered 200 but with an empty payload — usually a bad filter."""
+
+
+def build_http_client() -> httpx.AsyncClient:
+    """Create the shared HTTP client used for the whole server lifetime."""
+    return httpx.AsyncClient(
+        timeout=httpx.Timeout(REQUEST_TIMEOUT),
+        headers={"User-Agent": USER_AGENT},
+        follow_redirects=False,  # never chase a redirect off the allow-listed host
+    )
 
 
 def utc_now_iso() -> str:
@@ -79,9 +100,7 @@ class HolidayClient:
 
     async def __aenter__(self) -> HolidayClient:
         if self._http is None:
-            self._http = httpx.AsyncClient(
-                timeout=httpx.Timeout(20.0), headers={"User-Agent": USER_AGENT}
-            )
+            self._http = build_http_client()
         return self
 
     async def __aexit__(self, *exc_info: object) -> None:
@@ -94,8 +113,12 @@ class HolidayClient:
     async def _fetch_with_retry(self, url: str, params: dict[str, Any] | None = None) -> Any:
         """GET with exponential backoff. 4xx (except 429) are not retried."""
         assert self._http is not None, "HolidayClient must be used as an async context manager"
-        last_error: Exception | None = None
 
+        # Egress guard (SEC-004/-021): scheme + allow-list, then IP blocklist.
+        host = guard.assert_host_allowed(url)
+        guard.assert_resolved_ip_safe(host)
+
+        last_error: Exception | None = None
         for attempt in range(MAX_ATTEMPTS):
             if attempt > 0:
                 await asyncio.sleep(2**attempt)  # 2s, 4s, 8s
@@ -107,12 +130,41 @@ class HolidayClient:
                 last_error = exc
                 status = exc.response.status_code
                 if 400 <= status < 500 and status != 429:
-                    detail = exc.response.text[:300]
-                    raise UpstreamError(f"HTTP {status} from {url}: {detail}") from exc
+                    # Client error: log the detail, surface only the status (OBS-002).
+                    _log.warning(
+                        "upstream_client_error",
+                        extra={"context": {"url": url, "status": status}},
+                    )
+                    raise UpstreamError(f"upstream returned HTTP {status}") from exc
+                _log.warning(
+                    "upstream_retryable_status",
+                    extra={"context": {"url": url, "status": status, "attempt": attempt + 1}},
+                )
             except (httpx.RequestError, ValueError) as exc:
                 last_error = exc
+                _log.warning(
+                    "upstream_request_error",
+                    extra={
+                        "context": {
+                            "url": url,
+                            "error": type(exc).__name__,
+                            "attempt": attempt + 1,
+                        }
+                    },
+                )
 
-        raise UpstreamError(f"Upstream unreachable after {MAX_ATTEMPTS} attempts: {last_error}")
+        _log.error(
+            "upstream_unreachable",
+            extra={
+                "context": {
+                    "url": url,
+                    "attempts": MAX_ATTEMPTS,
+                    "last_error": type(last_error).__name__,
+                }
+            },
+        )
+        # Message is intentionally generic — the detail is only in the log (OBS-002).
+        raise UpstreamError(f"upstream unreachable after {MAX_ATTEMPTS} attempts")
 
     async def _cached(self, key: str, url: str, params: dict[str, Any]) -> tuple[Any, str, str]:
         """Return ``(payload, provenance, retrieved_at)``."""
@@ -182,7 +234,9 @@ class HolidayClient:
         assert self._http is not None
         started = time.perf_counter()
         try:
-            response = await self._http.get(url, timeout=8.0)
+            guard.assert_host_allowed(url)
+            guard.assert_resolved_ip_safe(urlparse(url).hostname or "")
+            response = await self._http.get(url, timeout=PROBE_TIMEOUT)
             return {
                 "name": name,
                 "base_url": url,
@@ -191,14 +245,14 @@ class HolidayClient:
                 "latency_ms": int((time.perf_counter() - started) * 1000),
                 "detail": None,
             }
-        except httpx.RequestError as exc:
+        except (httpx.RequestError, guard.EgressError) as exc:
             return {
                 "name": name,
                 "base_url": url,
                 "reachable": False,
                 "http_status": None,
                 "latency_ms": int((time.perf_counter() - started) * 1000),
-                "detail": f"{type(exc).__name__}: {exc}",
+                "detail": type(exc).__name__,
             }
 
 

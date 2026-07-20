@@ -44,14 +44,18 @@ This server is **read-only** and requires **no API key**:
 
 ### Deployment Hardening
 
-- The HTTP/SSE transport binds `0.0.0.0` by default (`MCP_HOST`). The server
-  has **no built-in authentication**.
-- For anything other than local/stdio use, set **`MCP_HOST=127.0.0.1`** to
-  restrict to loopback, or run **behind a reverse proxy that provides
+- The HTTP/SSE transport binds **`127.0.0.1` (loopback) by default** (`MCP_HOST`).
+  Binding a public interface (`MCP_HOST=0.0.0.0`) is an explicit opt-in and logs
+  a warning at startup — the server has **no built-in authentication**.
+- For non-loopback use, run **behind a reverse proxy that provides
   authentication and per-IP rate limits** (e.g. nginx with `limit_req` +
-  OAuth2-Proxy).
-- Logs go to **stderr**. Review your retention policy before enabling verbose
-  logging.
+  OAuth2-Proxy). DNS-rebinding protection (Host/Origin allow-list) is enabled
+  for the HTTP transport.
+- **Egress:** outbound requests are restricted to a two-host HTTPS allow-list
+  with an SSRF IP-blocklist — see [`docs/network-egress.md`](docs/network-egress.md).
+- Logs go to **stderr** and never contain request bodies or personal data.
+  Review your retention policy before enabling verbose logging.
+- Full security architecture: [`docs/security.md`](docs/security.md).
 
 ## Scope
 
