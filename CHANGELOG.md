@@ -3,6 +3,23 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- GitHub Actions CI (`.github/workflows/ci.yml`): test matrix on Python
+  3.10 / 3.11 / 3.12 (ruff lint, `ruff format --check`, syntax + import checks,
+  mocked unit tests) plus a `pip-audit` dependency-CVE scan.
+- Nightly live-API workflow (`live-tests.yml`) and PyPI trusted-publisher
+  workflow (`publish.yml`).
+- Dependabot (`.github/dependabot.yml`): weekly pip + GitHub Actions updates.
+- CI status badge in the READMEs.
+
+### Changed
+
+- Applied `ruff format` to `src/` and `tests/` so the source satisfies the new
+  `ruff format --check` gate. Formatting only — no behaviour change.
+
 ## [0.1.0] — 2026-07-19
 
 ### Added
