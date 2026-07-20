@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "swiss-school-calendar-mcp"
+version = "0.1.0"
+description = "MCP server for Swiss school and public holidays — all 26 cantons, differentiated by Schulart"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "malkreide" }]
+keywords = ["mcp", "model-context-protocol", "llm", "swiss-open-data", "school-holidays"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Education",
+]
+dependencies = [
+    "mcp>=1.2.0",
+    "httpx>=0.27",
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "respx>=0.21",
+    "ruff>=0.5",
+]
+
+[project.scripts]
+swiss-school-calendar-mcp = "swiss_school_calendar_mcp.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/malkreide/swiss-school-calendar-mcp"
+Issues = "https://github.com/malkreide/swiss-school-calendar-mcp/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/swiss_school_calendar_mcp"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = ["live: hits the real upstream API (excluded from CI)"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
