@@ -1,0 +1,222 @@
+{
+  "ARCH-002": {
+    "observed": "Tool descriptions are decent multi-sentence docstrings with prose context and explicit differentiation, but contain no structured <use_case>/<important_notes> tags, and at least one tool (next_school_holidays) is a single terse sentence.",
+    "expected": "Use-case tag (or equivalent structured section) present in >=80% of tools; caveats/limitations surfaced in-description; every tool >= 100 chars with clear differentiation.",
+    "risk": "Weaker semantic separation at tool-selection time; the LLM has less structured signal to disambiguate the several holiday-lookup tools, mildly raising wrong-tool-selection risk.",
+    "remediation": "Add a short structured use-case/important-notes block (tags or a consistent 'Use when: ... Do not use for: ...' convention) to each docstring; expand next_school_holidays with use-case and the VS default caveat.",
+    "effort": "S",
+    "title": "Tool-Beschreibung mit Use-Case-Tags",
+    "severity": "medium",
+    "status": "partial"
+  },
+  "ARCH-003": {
+    "observed": "Empty results are wrapped in a structured envelope (no bare [] or 'No results' string), and get_school_holidays adds a helpful note; but there is no match_type field, no fuzzy/suggestion fallback, and only one tool carries an explanatory empty note.",
+    "expected": "Non-sensitive search tools surface a match_type field (exact/fuzzy/none) and provide fuzzy matches or actionable suggestions on empty results; empty-result notes present consistently across search tools.",
+    "risk": "On a mistyped canton code or an off-range date the model receives an empty list from most tools with no guidance, increasing the chance it hallucinates a holiday or dead-ends instead of correcting the query.",
+    "remediation": "Add a match_type field to the response envelope and populate it; extend the explanatory-note pattern (already in get_school_holidays) to the other list/search tools; optionally suggest valid canton codes on empty results.",
+    "effort": "M",
+    "title": "«Not Found» Anti-Pattern: Heuristiken statt leerer Antworten",
+    "severity": "medium",
+    "status": "partial"
+  },
+  "ARCH-004": {
+    "observed": "Handlers are cleanly transport-agnostic and dual transport works via MCP_TRANSPORT, but configuration uses ad-hoc os.environ.get in __main__.py rather than a typed Settings object, and there is no shared lifespan (the HTTP client is instantiated per tool call).",
+    "expected": "Configuration centralised in a Pydantic-Settings object; shared setup (HTTP client) provided via lifespan/DI rather than per-call construction.",
+    "risk": "Config drift and untyped env parsing (e.g. int(PORT)) can fail at runtime; per-call client construction forgoes connection reuse. Low correctness risk here (server is transport-agnostic) but weaker testability and config discipline.",
+    "remediation": "Introduce a BaseSettings class for transport/host/port; move the HTTP client into a FastMCP lifespan and inject it, so tools do not construct a client per call.",
+    "effort": "M",
+    "title": "Inversion of Control: Transport-agnostische Server-Logik",
+    "severity": "high",
+    "status": "partial"
+  },
+  "ARCH-007": {
+    "observed": "Tools are well-aggregated and atomic from the LLM's perspective (no ID-chaining), but check_date fetches school and public holidays sequentially instead of with asyncio.gather.",
+    "expected": "Where a tool issues multiple independent upstream calls, use asyncio.gather to parallelise them.",
+    "risk": "Minor added latency on check_date (two round-trips serialised); no correctness impact.",
+    "remediation": "Wrap the school_holidays and public_holidays fetches in check_date in a single asyncio.gather.",
+    "effort": "S",
+    "title": "Capability-Aggregation: Composability intern, Atomarität extern",
+    "severity": "medium",
+    "status": "partial"
+  },
+  "ARCH-008": {
+    "observed": "The server is Tools-only (10 tools) with no Resources or Prompts, and the READMEs contain no section justifying the tools-only choice.",
+    "expected": "Use at least two of the three MCP primitives, or document in the README why tools-only is appropriate for this phase; evaluate static read-only tools (list_cantons, list_school_types) for Resource migration.",
+    "risk": "Tool-manifest token cost for data that could be cacheable Resources; missed URI-navigability and client caching; audit cannot see a deliberate primitive-choice rationale.",
+    "remediation": "Add a 'MCP Primitives' section to both READMEs justifying tools-only for Phase 1, and/or migrate list_cantons and list_school_types to Resources with a documented URI scheme.",
+    "effort": "M",
+    "title": "Drei Primitive nutzen: Tools, Resources und Prompts",
+    "severity": "medium",
+    "status": "fail"
+  },
+  "ARCH-009": {
+    "observed": "Every tool sets readOnlyHint:True correctly, but no tool sets openWorldHint (all 10 make external HTTP calls) or idempotentHint, and there is no annotations policy/table in the docs.",
+    "expected": "Explicit and complete annotations per MCP spec: readOnlyHint (present), openWorldHint:true for the outbound-HTTP tools, idempotentHint:true for idempotent reads, plus an annotations overview in the README.",
+    "risk": "Hosts cannot show a network-egress hint for tools that call external APIs, and lose retry-safe signalling from idempotentHint; the host's UI security/UX signalling is under-specified.",
+    "remediation": "Add openWorldHint:True and idempotentHint:True to all ten annotations (a shared read_only_tool helper avoids drift) and add an annotations table to the README.",
+    "effort": "S",
+    "title": "Tool Annotations: readOnlyHint, destructiveHint, idempotentHint, openWorldHint",
+    "severity": "high",
+    "status": "partial"
+  },
+  "ARCH-011": {
+    "observed": "Repo structure is strong (all mandatory files, correct src-layout, parallel bilingual READMEs, CI+publish workflows), but the 10 tools all live in one 506-line server.py with no tools/ sub-package and no documented rationale for the deviation.",
+    "expected": "Servers with >5 tools split tool bodies into a tools/ package (file per group), keeping server.py to registry/lifecycle (~<200 lines), or document the deviation.",
+    "risk": "Harder code review and weaker test isolation as the tool set grows; minor and purely maintainability-related.",
+    "remediation": "Extract tool groups (lists, holidays, comparison, health) into src/swiss_school_calendar_mcp/tools/*.py, or add a short note in README Project Structure justifying the single-file layout.",
+    "effort": "S",
+    "title": "Standardisierte Repo-Struktur (src-Layout, tests, README.de.md)",
+    "severity": "medium",
+    "status": "partial"
+  },
+  "ARCH-012": {
+    "observed": "protocolVersion is left to the SDK default (never pinned), CHANGELOG and Dependabot exist but no CHANGELOG entry names a spec version and no README documents the supported protocol version or an update policy.",
+    "expected": "Explicit protocolVersion pin in server.py, CHANGELOG entries that note spec-version bumps, and a README 'MCP Protocol Version' section with an update/breaking-change policy.",
+    "risk": "A future mcp SDK upgrade (unbounded by mcp>=1.2.0) could silently change the negotiated protocol version and break clients, with no documented compatibility contract or audit trail.",
+    "remediation": "Pin an explicit protocol version at FastMCP construction, add a 'MCP Protocol Version' + update-policy section to both READMEs, and reference the spec version in CHANGELOG entries; consider an upper bound on the mcp dependency.",
+    "effort": "S",
+    "title": "protocolVersion-Pinning + CHANGELOG + SDK-Update-Disziplin",
+    "severity": "medium",
+    "status": "fail"
+  },
+  "SEC-004": {
+    "observed": "The server makes outbound GETs only to two hardcoded HTTPS hosts; no tool constructs a URL host from user/LLM free-text, and httpx follow_redirects defaults to False with TLS verification on. However none of the explicit SSRF controls from the spec exist (no scheme validation, no resolved-IP blocklist, no metadata-IP block, no egress proxy).",
+    "expected": "Even with fixed hosts, defense-in-depth: an explicit https-only assertion and a resolved-IP blocklist (or egress proxy) applied before each outbound request, so a future refactor that introduces a user-influenced host, or a redirect/DNS-poisoning edge, cannot reach internal/metadata endpoints.",
+    "risk": "Low in current form because the host is never user-controlled and redirects are disabled; residual risk is a future code change adding a user-influenced URL, or DNS poisoning of the two fixed domains, with no blocklist backstop.",
+    "remediation": "Add a small assert_https_and_public(url) helper (urlparse scheme check + getaddrinfo + ipaddress blocklist for RFC1918/loopback/link-local incl. 169.254.169.254 and ::1/fe80::) and call it in HolidayClient._fetch_with_retry/probe; keep follow_redirects=False explicit.",
+    "effort": "M",
+    "title": "SSRF-Prevention: HTTPS-Enforcement + IP-Blocklisting",
+    "severity": "critical",
+    "status": "partial"
+  },
+  "SEC-005": {
+    "observed": "No DNS-pinning implementation exists. The rebinding attack surface is nonetheless negligible because the two hostnames are hardcoded constants (not user-controllable) and default TLS certificate verification would reject a rebind to an unrelated internal IP.",
+    "expected": "For servers matching the spec, DNS resolved once and the pinned IP reused for the TCP connection with original Host/SNI preserved. Here the equivalent protection is provided architecturally (fixed hosts + TLS verify), but no explicit pinning control is present.",
+    "risk": "Very low: an attacker cannot influence the resolved hostname, and TLS verification defeats a rebind to an internal address for the fixed public domains.",
+    "remediation": "Optional defense-in-depth: route outbound calls through a pinning transport or egress proxy shared with the SEC-004 fix; otherwise document that fixed hostnames + TLS verification are the accepted mitigation.",
+    "effort": "M",
+    "title": "DNS-Rebinding-Prevention: DNS-Pinning gegen TOCTOU",
+    "severity": "high",
+    "status": "partial"
+  },
+  "SEC-007": {
+    "observed": "No container image or sandbox configuration is committed. The server runs with full user privileges when launched locally, and no hardened Dockerfile exists for the documented cloud SSE path.",
+    "expected": "A hardened Dockerfile (non-root UID, read-only rootfs, dropped capabilities, seccomp RuntimeDefault) for the network-deployment path, and/or documented sandboxing for local execution.",
+    "risk": "Limited in practice: the server is a read-only Public-Open-Data client with no secrets, no PII, no write/subprocess/filesystem tools, so a compromised process cannot exfiltrate stored data. Residual risk is a supply-chain compromise executing with user privileges (SSH keys, browser cookies) since no sandbox confines it.",
+    "remediation": "Add a multi-stage Dockerfile with USER 10001, drop capabilities, read-only rootfs + tmpfs /tmp for the SSE deployment; note in SECURITY.md that local stdio runs with user privileges and recommend running under a restricted user.",
+    "effort": "S",
+    "title": "Container-Sandboxing: Docker / chroot mit minimalen Privilegien",
+    "severity": "high",
+    "status": "partial"
+  },
+  "SEC-016": {
+    "observed": "When an HTTP/SSE transport is enabled, the listener binds 0.0.0.0 by default with no authentication. The spec's pass criteria require the code default to be 127.0.0.1 with 0.0.0.0 opt-in only inside a container; here the code default is 0.0.0.0, exactly the documented Fail-Pattern.",
+    "expected": "Default MCP_HOST=127.0.0.1 in code; 0.0.0.0 set only via an explicit Dockerfile/deployment ENV; optional runtime warning when binding all interfaces outside a container.",
+    "risk": "On a laptop in a shared/public network, enabling SSE exposes an unauthenticated MCP server to every host in the subnet (NeighborJack): tools/list + read-only tool calls, upstream data pull, and resource use. Partially mitigated because HTTP is opt-in (stdio is the default and opens no port).",
+    "remediation": "Change default to MCP_HOST=127.0.0.1 in __main__.py; add ENV MCP_HOST=0.0.0.0 in a container image only; update README table; optionally log a warning when host in ('0.0.0.0','::') and no container is detected.",
+    "effort": "S",
+    "title": "0.0.0.0-Binding-Prevention (NeighborJack)",
+    "severity": "critical",
+    "status": "fail"
+  },
+  "SEC-018": {
+    "observed": "Only language (whitelist) and dates (fromisoformat) are validated. All other tool inputs are unconstrained plain str/int/list types: no numeric bounds, no string length/pattern, no strict mode, no extra='forbid'.",
+    "expected": "Each tool argument validated against a strict schema at the boundary: numeric ge/le bounds, string min/max length and whitelist patterns, list size caps, canton codes checked against CANTON_CODES, and model_config {'strict': True, 'extra': 'forbid'}.",
+    "risk": "LLM hallucinations or malformed args can cause unbounded work (e.g. huge cantons lists -> O(n^2) overlap, absurd year/count values) or confusing empty results; low severity given read-only, in-memory, single upstream, but it is missing defense-in-depth.",
+    "remediation": "Introduce Pydantic v2 input models per tool with Field(ge=..., le=...) for year/count/min_days, StringConstraints/length for canton & school_type (validate canton against CANTON_CODES), a max length on cantons, and strict/extra='forbid'.",
+    "effort": "M",
+    "title": "Input-Validation an Tool-Boundaries (Pydantic strict / Zod)",
+    "severity": "high",
+    "status": "partial"
+  },
+  "SEC-021": {
+    "observed": "Outbound requests are constrained to two hardcoded hosts by construction, but there is no explicit code-layer allow-list guard (frozenset + assert_host_allowed) and no network-layer egress control, and no egress policy documentation.",
+    "expected": "A frozenset ALLOWED_HOSTS checked before each outbound request, plus a network-layer egress restriction for the deployed path, documented in docs/network-egress.md.",
+    "risk": "Low today because hosts are compile-time constants not derived from user input; residual exposure is a compromised image or future code change issuing requests to arbitrary domains with no allow-list or network backstop to catch exfiltration.",
+    "remediation": "Add ALLOWED_HOSTS = frozenset({'openholidaysapi.org','date.nager.at'}) and assert_host_allowed(url) in HolidayClient before each GET; for cloud deployment add a NetworkPolicy/security-group egress rule and a docs/network-egress.md.",
+    "effort": "M",
+    "title": "Egress-Allow-List: Code-Layer und Network-Layer",
+    "severity": "high",
+    "status": "partial"
+  },
+  "SDK-001": {
+    "observed": "There is no FastMCP lifespan. Each of the 10 tools opens `async with HolidayClient()` which builds a brand-new httpx.AsyncClient (fresh connection pool) per invocation and closes it on exit. The client's 12-hour in-memory cache is stored on that per-call instance and is discarded when the tool returns, so it never serves a subsequent call.",
+    "expected": "An @asynccontextmanager lifespan initialises one shared httpx.AsyncClient (and the cache) before the first request and closes it after the last, passed via FastMCP(..., lifespan=lifespan) and reused by tools through the injected context.",
+    "risk": "No connection pooling or keep-alive reuse across calls (TCP+TLS handshake per tool call to OpenHolidays/Nager), and the caching layer provides no benefit because it is thrown away every call. Cleanup itself is handled by `async with`/__aexit__ so there is no hard resource leak, which bounds real-world impact for a low-traffic local-stdio deployment; the defect is performance and wasted-cache, not leakage.",
+    "remediation": "Add `@asynccontextmanager async def lifespan(server): server.state.http = httpx.AsyncClient(...); try: yield; finally: await server.state.http.aclose()`, pass `lifespan=lifespan` to FastMCP, and have tools reuse `ctx.fastmcp.state.http` (HolidayClient already accepts an injected `http=` client, client.py:74, so it can wrap the shared client without owning it).",
+    "effort": "S",
+    "title": "FastMCP Lifespan via @asynccontextmanager + AsyncExitStack",
+    "severity": "high",
+    "status": "fail"
+  },
+  "SDK-003": {
+    "observed": "No tool takes a `ctx: Context` parameter; there is no progress reporting and no ctx-based logging anywhere. Most tools are single fast cached fetches, but the retry backoff (2+4+8s) and the double-fetch in check_date can push a call to ~14s with zero client-visible progress.",
+    "expected": "Tools whose realistic worst-case runtime exceeds ~2s (those hitting the retry/backoff path) accept `ctx: Context` and emit `ctx.report_progress()` / `ctx.info()` / `ctx.warning()`, especially to signal upstream-degraded retries rather than blocking silently.",
+    "risk": "During upstream slowdowns the client sees a multi-second stall with no feedback and may time out, and degraded/retry conditions are invisible except in the final payload. Impact is moderate: happy-path calls are fast and cached, so this only bites when upstream is slow.",
+    "remediation": "Add `ctx: Context` to the network-bound tools (at minimum get_school_holidays, get_public_holidays, check_date, compare_school_holidays, find_common_free_window), and emit `ctx.info` before fetching plus `ctx.warning` on each retry attempt; thread ctx into the client retry loop or log around the `await client....` calls.",
+    "effort": "S",
+    "title": "Context Injection für Progress Reports und Logging",
+    "severity": "medium",
+    "status": "partial"
+  },
+  "SDK-004": {
+    "observed": "The server advertises HTTP/SSE transport via MCP_TRANSPORT but configures no CORS middleware; it uses the default FastMCP ASGI app, which does not expose the Mcp-Session-Id response header for cross-origin browser clients.",
+    "expected": "When HTTP/SSE is enabled, a CORSMiddleware (or FastMCP cors settings) exposes `Mcp-Session-Id` via `expose_headers`, lists it in `allow_headers`, and restricts `allow_origins` to an explicit env-driven allow-list.",
+    "risk": "Only materialises if the server is actually deployed over HTTP for browser-based cross-origin clients: those clients cannot read the session id, so follow-up requests lose session affinity and stateful conversation collapses — while stdio and server-side curl tests pass, making it hard to diagnose. Current deployment is local-stdio, so the risk is latent, not active; but the code path is shipped and unguarded.",
+    "remediation": "Wrap the HTTP transport in a Starlette app with CORSMiddleware setting `expose_headers=[\"Mcp-Session-Id\"]`, `allow_headers=[...,\"Mcp-Session-Id\"]`, and `allow_origins` from an ALLOWED_ORIGINS env var (no wildcard with credentials), or set the equivalent FastMCP cors settings before run().",
+    "effort": "S",
+    "title": "CORS Mcp-Session-Id Exposure bei HTTP/SSE",
+    "severity": "high",
+    "status": "partial"
+  },
+  "SCALE-002": {
+    "observed": "The server can run over HTTP/SSE but is deployed only as a single local-stdio process; there is no load balancer, no sticky-session config, and no shared/external session store — and none is needed at single-instance scale.",
+    "expected": "If and when the HTTP/SSE transport is deployed behind a load balancer across multiple instances, either sticky sessions keyed on the Mcp-Session-Id header (HAProxy/Nginx/K8s ingress) or a shared-state session manager (e.g. Redis) with an explicit TTL must be in place.",
+    "risk": "Currently none — a single instance cannot lose sessions to a peer. The risk only arises on a future horizontal HTTP deployment, where naive round-robin routing would break mid-session MCP connections.",
+    "remediation": "Marked skip because the precondition (multi-instance HTTP deployment) is absent. Before any horizontally scaled HTTP rollout, add sticky sessions on `Mcp-Session-Id` or a Redis-backed session manager with a defined TTL, and add a failover test.",
+    "effort": "M",
+    "title": "Stateful Load Balancing für Streamable HTTP / SSE",
+    "severity": "high",
+    "status": "skip"
+  },
+  "OBS-002": {
+    "observed": "_degraded() interpolates the raw exception (`{exc}`) into the user-visible note, and client.py embeds a 300-char upstream response-body excerpt plus the full endpoint URL into UpstreamError. FastMCP is initialised without mask_error_details=True.",
+    "expected": "Execution errors surface user-friendly, sanitised messages; raw exception text, upstream bodies and internal URLs stay out of the LLM context and go to a server-side log only. mask_error_details=True (or equivalent) guards unhandled errors.",
+    "risk": "Low in this server's context — data class is Public Open Data with no PII, SQL, or secrets, so the leaked internals are limited to public API URLs and public problem+json bodies. Still a deviation from the masking best practice and a habit that becomes dangerous if the codebase later gains authenticated/private upstreams.",
+    "remediation": "Replace `({exc})` in _degraded() with a fixed generic caveat; drop exc.response.text[:300] and the URL from the user-facing UpstreamError message (keep them only for an internal logger once OBS-003 is addressed); set FastMCP(..., mask_error_details=True).",
+    "effort": "S",
+    "title": "Mask Error Details: keine Stacktraces / SQL ans LLM",
+    "severity": "high",
+    "status": "partial"
+  },
+  "OBS-003": {
+    "observed": "The codebase contains no logging whatsoever: no structlog/loguru dependency, no logger instance, no severity levels, no correlation context. Retries and degradations happen silently.",
+    "expected": "A structured logger (structlog) configured for JSON/logfmt output to stderr, using RFC 5424 severity levels, with per-tool-call bound context (tool name, correlation id) logging invocation, success and failure.",
+    "risk": "Operational blind spot — upstream outages, retry storms and schema drift leave no trace, making incident diagnosis and monitoring aggregation impossible. Medium severity; no direct security impact for a public-data read-only server.",
+    "remediation": "Add structlog to dependencies, configure it with WriteLoggerFactory(file=sys.stderr) and a JSONRenderer, and emit bound log events (tool_invoked/tool_succeeded/tool_failed, retry attempts) across server.py tools and client.py _fetch_with_retry.",
+    "effort": "S",
+    "title": "Structured Logging mit RFC 5424 Severity-Stufen",
+    "severity": "medium",
+    "status": "fail"
+  },
+  "OPS-003": {
+    "observed": "The server correctly declares and implements Phase 1 (read-only, all tools readOnlyHint:true, no write/destructive tools), but there is no standalone roadmap.md and no documented phase-transition prerequisites/gates.",
+    "expected": "Phase declared (met) plus a roadmap file enumerating phase-specific tasks and the documented preconditions for advancing Phase 1->2 (audit, ISDS/CH-005, DSG/CH-002).",
+    "risk": "Low operationally for a read-only public-data server — the core discipline (read-only first) is honoured. The gap is documentation completeness: future maintainers lack an explicit gate before adding a semantic layer or write tools.",
+    "remediation": "Add docs/roadmap.md with Phase 1/2/3 task checklists and the Phase-1->2 prerequisites; optionally reformat the README Lifecycle Phase section as a status table.",
+    "effort": "S",
+    "title": "Phasenarchitektur: Read-only First, dann Write, dann Multi-Agent",
+    "severity": "high",
+    "status": "partial"
+  },
+  "CH-006": {
+    "observed": "The server processes only Public Open Data (holiday calendars, no PII) and states 'no personal data' in README/SECURITY, but there is no explicit Schulamt classification declaration (Öffentlich/BUI/VERT/SVERT), no highest-level statement, and no aggregation-risk note — despite schulamt_context=true making this check mandatory.",
+    "expected": "An explicit classification artefact declaring the highest data class as 'Öffentlich', with a short aggregation-risk statement confirming that cross-cantonal aggregation of public holiday calendars cannot re-identify individuals.",
+    "risk": "Low in substance — the data is genuinely public with no PII, so the correct class is 'Öffentlich' and no re-identification is possible. The gap is formal: without an explicit declaration, an operations team cannot confirm the classification was assessed rather than assumed. Severity high per the mandatory-for-Schulamt frontmatter, but real-world risk is minimal.",
+    "remediation": "Add a short classification statement (e.g. docs/klassifikation.md or a README subsection) declaring highest level 'Öffentlich', listing the data types, and explicitly noting the nil aggregation/re-identification risk since only cantonal-level public calendars are handled.",
+    "effort": "S",
+    "title": "Schulamt Klassifikationsschema: BUI/Vertraulich/Streng-Vertraulich",
+    "severity": "high",
+    "status": "partial"
+  }
+}
