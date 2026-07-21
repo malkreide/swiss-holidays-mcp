@@ -5,7 +5,7 @@
 ## Supported Versions
 
 Security fixes are provided for the latest released version on
-[PyPI](https://pypi.org/project/swiss-school-calendar-mcp/). Please always
+[PyPI](https://pypi.org/project/swiss-holidays-mcp/). Please always
 upgrade to the most recent version before reporting an issue.
 
 ## Reporting a Vulnerability

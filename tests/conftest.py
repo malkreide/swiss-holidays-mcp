@@ -2,7 +2,7 @@ import httpx
 import pytest
 import pytest_asyncio
 
-from swiss_school_calendar_mcp.client import HolidayClient
+from swiss_holidays_mcp.client import HolidayClient
 
 
 @pytest.fixture(autouse=True)
@@ -10,9 +10,7 @@ def _no_dns(monkeypatch):
     """Keep unit tests offline: the egress guard's scheme + allow-list check
     still runs, but the DNS/IP resolution is stubbed (respx mocks httpx, not
     the socket layer)."""
-    monkeypatch.setattr(
-        "swiss_school_calendar_mcp.guard.assert_resolved_ip_safe", lambda host: None
-    )
+    monkeypatch.setattr("swiss_holidays_mcp.guard.assert_resolved_ip_safe", lambda host: None)
 
 
 @pytest_asyncio.fixture

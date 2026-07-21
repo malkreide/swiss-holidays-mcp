@@ -4,8 +4,8 @@ import httpx
 import pytest
 import respx
 
-from swiss_school_calendar_mcp.constants import OPENHOLIDAYS_BASE
-from swiss_school_calendar_mcp.server import op_get_school_holidays, op_source_status
+from swiss_holidays_mcp.constants import OPENHOLIDAYS_BASE
+from swiss_holidays_mcp.server import op_get_school_holidays, op_source_status
 
 
 @pytest.fixture(autouse=True)
@@ -15,7 +15,7 @@ def no_backoff_delay(monkeypatch):
     async def _instant(_seconds: float) -> None:
         return None
 
-    monkeypatch.setattr("swiss_school_calendar_mcp.client.asyncio.sleep", _instant)
+    monkeypatch.setattr("swiss_holidays_mcp.client.asyncio.sleep", _instant)
 
 
 @respx.mock

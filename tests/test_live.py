@@ -2,7 +2,7 @@
 
 import pytest
 
-from swiss_school_calendar_mcp.server import (
+from swiss_holidays_mcp.server import (
     op_compare_school_holidays,
     op_get_school_holidays,
     op_list_cantons,

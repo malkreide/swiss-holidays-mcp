@@ -4,10 +4,10 @@ import httpx
 import pytest
 import respx
 
-from swiss_school_calendar_mcp.client import normalise_language
-from swiss_school_calendar_mcp.constants import OPENHOLIDAYS_BASE
-from swiss_school_calendar_mcp.guard import EgressError, assert_host_allowed
-from swiss_school_calendar_mcp.server import (
+from swiss_holidays_mcp.client import normalise_language
+from swiss_holidays_mcp.constants import OPENHOLIDAYS_BASE
+from swiss_holidays_mcp.guard import EgressError, assert_host_allowed
+from swiss_holidays_mcp.server import (
     op_check_date,
     op_get_school_holidays,
     op_list_cantons,

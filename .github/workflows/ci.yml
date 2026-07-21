@@ -32,11 +32,11 @@ jobs:
 
       - name: Syntax-Prüfung
         run: |
-          python -m py_compile src/swiss_school_calendar_mcp/server.py
-          python -m py_compile src/swiss_school_calendar_mcp/client.py
+          python -m py_compile src/swiss_holidays_mcp/server.py
+          python -m py_compile src/swiss_holidays_mcp/client.py
 
       - name: Import-Test
-        run: python -c "from swiss_school_calendar_mcp.server import mcp; print('Import OK')"
+        run: python -c "from swiss_holidays_mcp.server import mcp; print('Import OK')"
 
       - name: Unit-Tests (gemockt, ohne Netzwerk)
         run: pytest tests/ -v -m "not live"

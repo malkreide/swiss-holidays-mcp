@@ -5,7 +5,7 @@
 ## Unterstützte Versionen
 
 Sicherheitsupdates werden für die jeweils neueste auf
-[PyPI](https://pypi.org/project/swiss-school-calendar-mcp/) veröffentlichte
+[PyPI](https://pypi.org/project/swiss-holidays-mcp/) veröffentlichte
 Version bereitgestellt. Bitte aktualisieren Sie immer auf die aktuellste
 Version, bevor Sie ein Problem melden.
 

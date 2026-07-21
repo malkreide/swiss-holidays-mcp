@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: "https://pypi.org/p/swiss-school-calendar-mcp"
+      url: "https://pypi.org/p/swiss-holidays-mcp"
     permissions:
       id-token: write  # Pflicht für Trusted Publisher
 
