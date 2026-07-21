@@ -81,7 +81,7 @@ async def lifespan(_server: FastMCP) -> AsyncIterator[AppState]:
         await http.aclose()
 
 
-mcp = FastMCP("swiss-school-calendar-mcp", lifespan=lifespan)
+mcp = FastMCP("swiss-holidays-mcp", lifespan=lifespan)
 
 _OH = ATTRIBUTIONS["openholidays"]
 _NG = ATTRIBUTIONS["nager"]

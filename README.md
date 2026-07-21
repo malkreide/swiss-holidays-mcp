@@ -2,16 +2,16 @@
 >
 > This is a **private project**. It is independent of any employer or institutional affiliation and represents no official position of any authority.
 
-# 📅 swiss-school-calendar-mcp
+# 📅 swiss-holidays-mcp
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-purple)](https://modelcontextprotocol.io/)
-[![CI](https://github.com/malkreide/swiss-school-calendar-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/malkreide/swiss-school-calendar-mcp/actions)
-[![No Auth Required](https://img.shields.io/badge/auth-not%20required-lightgrey)](https://github.com/malkreide/swiss-school-calendar-mcp)
+[![CI](https://github.com/malkreide/swiss-holidays-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/malkreide/swiss-holidays-mcp/actions)
+[![No Auth Required](https://img.shields.io/badge/auth-not%20required-lightgrey)](https://github.com/malkreide/swiss-holidays-mcp)
 [![Data Source](https://img.shields.io/badge/Data-OpenHolidays%20%2F%20Nager.Date-green)](https://www.openholidaysapi.org/)
 
-> MCP server for Swiss **school holidays and public holidays** across all 26 cantons — differentiated by *Schulart* (school type), which matters more than it first appears. No API key required.
+> A **Swiss holiday calendar** for AI agents — **public holidays, school holidays and long weekends** for all 26 cantons, with cross-cantonal comparison. School holidays are differentiated by *Schulart* (school type), which matters more than it first appears. No API key required.
 
 [🇩🇪 Deutsche Version](README.de.md)
 
@@ -19,9 +19,9 @@
 
 ## Overview
 
-**swiss-school-calendar-mcp** gives AI assistants like Claude direct access to Swiss school and public holiday data for all 26 cantons — no API keys required. School holidays are set cantonally, sometimes at district level, and — in six cantons — **separately per school type**. A federal calendar does not exist; anyone planning across cantonal borders is otherwise reduced to opening 26 PDF pages.
+**swiss-holidays-mcp** is a Swiss holiday calendar for AI assistants like Claude — **public holidays, school holidays and long weekends** for all 26 cantons, no API keys required. Public holidays are cantonal (Berchtoldstag, Fronleichnam & co. differ by canton, not just the federal minimum). School holidays are set cantonally, sometimes at district level, and — in six cantons — **separately per school type**. A single federal calendar does not exist; anyone planning across cantonal borders is otherwise reduced to opening 26 PDF pages.
 
-The server covers two thematic clusters: **school holidays** (with *Schulart* differentiation) and **public holidays / long weekends**. Each cluster maps to a group of purpose-built tools that translate raw agency data into clean, provenance-tagged JSON responses. All data comes from the [OpenHolidays API](https://www.openholidaysapi.org/) (CC BY 4.0) and [Nager.Date](https://date.nager.at/) (MIT).
+The server covers two thematic clusters: **public holidays / long weekends** and **school holidays** (with *Schulart* differentiation). Each cluster maps to a group of purpose-built tools that translate raw agency data into clean, provenance-tagged JSON responses. All data comes from the [OpenHolidays API](https://www.openholidaysapi.org/) (CC BY 4.0) and [Nager.Date](https://date.nager.at/) (MIT).
 
 > **Mnemonic:** *A duplicate in Swiss school data is usually a school type in disguise.* The underlying API publishes the *same* holiday period several times when a canton differentiates by school type. That looks like duplicated data and invites naive de-duplication — which would destroy exactly the distinction a school authority needs.
 
@@ -110,7 +110,7 @@ This server uses **Architecture A (live API only, with in-memory cache)**.
 
 ```
                     ┌──────────────────────────┐
-   Claude / any ───▶│  swiss-school-calendar   │
+   Claude / any ───▶│  swiss-holidays-mcp      │
    MCP host         │  (FastMCP · 10 tools)    │
                     └────────┬─────────────────┘
                              │  retry 2s/4s/8s · 12h cache
@@ -175,14 +175,14 @@ This server uses **Architecture A (live API only, with in-memory cache)**.
 Run via [`uv`](https://docs.astral.sh/uv/)'s `uvx` — no clone or manual install needed:
 
 ```bash
-uvx swiss-school-calendar-mcp
+uvx swiss-holidays-mcp
 ```
 
 ### Development
 
 ```bash
-git clone https://github.com/malkreide/swiss-school-calendar-mcp
-cd swiss-school-calendar-mcp
+git clone https://github.com/malkreide/swiss-holidays-mcp
+cd swiss-holidays-mcp
 pip install -e ".[dev]"
 ```
 
@@ -200,9 +200,9 @@ Add to `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "swiss-school-calendar": {
+    "swiss-holidays": {
       "command": "uvx",
-      "args": ["swiss-school-calendar-mcp"]
+      "args": ["swiss-holidays-mcp"]
     }
   }
 }
@@ -215,7 +215,7 @@ Restart Claude Desktop — the server starts automatically on first use.
 For use via **claude.ai in the browser** (e.g. on managed workstations without local software):
 
 ```bash
-MCP_TRANSPORT=sse PORT=8000 python -m swiss_school_calendar_mcp
+MCP_TRANSPORT=sse PORT=8000 python -m swiss_holidays_mcp
 ```
 
 FastMCP exposes SSE at `/sse`, not `/mcp`.
@@ -233,9 +233,9 @@ FastMCP exposes SSE at `/sse`, not `/mcp`.
 ## Project Structure
 
 ```
-swiss-school-calendar-mcp/
+swiss-holidays-mcp/
 ├── src/
-│   └── swiss_school_calendar_mcp/
+│   └── swiss_holidays_mcp/
 │       ├── __init__.py       # Package init
 │       ├── __main__.py       # Entry point: stdio / SSE / Streamable HTTP
 │       ├── server.py         # FastMCP server: lifespan, 10 tools, op_* logic
@@ -387,4 +387,4 @@ Hayal Oezkan · [github.com/malkreide](https://github.com/malkreide)
 
 MIT licensed. Public money, public code.
 
-<!-- mcp-name: io.github.malkreide/swiss-school-calendar-mcp -->
+<!-- mcp-name: io.github.malkreide/swiss-holidays-mcp -->

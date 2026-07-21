@@ -3,6 +3,21 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] — 2026-07-21
+
+### Changed (breaking)
+
+- **Renamed the project `swiss-school-calendar-mcp` → `swiss-holidays-mcp`** and
+  repositioned it as a general Swiss holiday calendar (public holidays, school
+  holidays and long weekends) rather than a school-authority tool. School
+  holidays with *Schulart* differentiation remain a first-class feature.
+- The Python package/module is now `swiss_holidays_mcp`; the console script and
+  PyPI/registry name are `swiss-holidays-mcp`. Update your client config:
+  `uvx swiss-holidays-mcp` and the `mcpServers` key `swiss-holidays`.
+- Tools, response models and behaviour are unchanged — this release is a
+  rename + reframing only. (The v0.2.0 package was never published to PyPI, so
+  no deprecation shim is provided.)
+
 ## [0.2.0] — 2026-07-20
 
 Security & best-practice remediation following the 2026-07-20 mcp-audit

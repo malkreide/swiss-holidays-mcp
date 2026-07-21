@@ -21,4 +21,4 @@ ENV MCP_TRANSPORT=streamable-http \
 # inside the container is the documented, intended case (the host still maps a
 # single published port). Put an authenticating reverse proxy in front.
 EXPOSE 8000
-ENTRYPOINT ["python", "-m", "swiss_school_calendar_mcp"]
+ENTRYPOINT ["python", "-m", "swiss_holidays_mcp"]

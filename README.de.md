@@ -4,24 +4,24 @@
 >
 > Dies ist ein **privates Projekt**. Es ist unabhängig von jeder Arbeitgeberin und jeder institutionellen Zugehörigkeit und stellt keine offizielle Position einer Behörde dar.
 
-# 📅 swiss-school-calendar-mcp
+# 📅 swiss-holidays-mcp
 
 [![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-purple)](https://modelcontextprotocol.io/)
-[![CI](https://github.com/malkreide/swiss-school-calendar-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/malkreide/swiss-school-calendar-mcp/actions)
-[![Kein Auth erforderlich](https://img.shields.io/badge/Authentifizierung-nicht%20erforderlich-lightgrey)](https://github.com/malkreide/swiss-school-calendar-mcp)
+[![CI](https://github.com/malkreide/swiss-holidays-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/malkreide/swiss-holidays-mcp/actions)
+[![Kein Auth erforderlich](https://img.shields.io/badge/Authentifizierung-nicht%20erforderlich-lightgrey)](https://github.com/malkreide/swiss-holidays-mcp)
 [![Datenquelle](https://img.shields.io/badge/Daten-OpenHolidays%20%2F%20Nager.Date-green)](https://www.openholidaysapi.org/)
 
-> MCP-Server für **Schulferien und Feiertage** aller 26 Kantone — differenziert nach *Schulart*, was mehr Gewicht hat, als es auf den ersten Blick scheint. Kein API-Key erforderlich.
+> Ein **Schweizer Feiertagskalender** für KI-Agenten — **Feiertage, Schulferien und lange Wochenenden** aller 26 Kantone, mit interkantonalem Vergleich. Schulferien sind nach *Schulart* differenziert, was mehr Gewicht hat, als es auf den ersten Blick scheint. Kein API-Key erforderlich.
 
 ---
 
 ## Übersicht
 
-**swiss-school-calendar-mcp** verschafft KI-Assistenten wie Claude direkten Zugang zu Schweizer Schul- und Feiertagsdaten aller 26 Kantone — ohne API-Key. Schulferien werden kantonal festgelegt, teilweise auf Bezirksebene, und in sechs Kantonen **separat pro Schulart**. Einen nationalen Kalender gibt es nicht; wer über Kantonsgrenzen hinweg plant, öffnet sonst 26 PDF-Seiten.
+**swiss-holidays-mcp** ist ein Schweizer Feiertagskalender für KI-Assistenten wie Claude — **Feiertage, Schulferien und lange Wochenenden** aller 26 Kantone, ohne API-Key. Feiertage sind kantonal (Berchtoldstag, Fronleichnam & Co. unterscheiden sich je Kanton, nicht nur das eidgenössische Minimum). Schulferien werden kantonal festgelegt, teilweise auf Bezirksebene, und in sechs Kantonen **separat pro Schulart**. Einen einzigen nationalen Kalender gibt es nicht; wer über Kantonsgrenzen hinweg plant, öffnet sonst 26 PDF-Seiten.
 
-Der Server deckt zwei thematische Cluster ab: **Schulferien** (mit *Schulart*-Differenzierung) und **Feiertage / lange Wochenenden**. Jedes Cluster bildet eine Gruppe zweckgebauter Tools, die Rohdaten in saubere, provenienz-getaggte JSON-Antworten übersetzen. Alle Daten stammen aus der [OpenHolidays API](https://www.openholidaysapi.org/) (CC BY 4.0) und von [Nager.Date](https://date.nager.at/) (MIT).
+Der Server deckt zwei thematische Cluster ab: **Feiertage / lange Wochenenden** und **Schulferien** (mit *Schulart*-Differenzierung). Jedes Cluster bildet eine Gruppe zweckgebauter Tools, die Rohdaten in saubere, provenienz-getaggte JSON-Antworten übersetzen. Alle Daten stammen aus der [OpenHolidays API](https://www.openholidaysapi.org/) (CC BY 4.0) und von [Nager.Date](https://date.nager.at/) (MIT).
 
 > **Eselsbrücke:** *Ein Duplikat in Schweizer Schuldaten ist meistens eine verkleidete Schulart.* Die zugrunde liegende API publiziert dieselbe Ferienperiode mehrfach, sobald ein Kanton nach Schulart differenziert. Das sieht nach doppelten Daten aus und lädt zu naiver Deduplizierung ein — womit man genau jene Unterscheidung zerstört, die eine Schulbehörde braucht.
 
@@ -110,7 +110,7 @@ Dieser Server nutzt **Architektur A (Live-API only, mit In-Memory-Cache)**.
 
 ```
                     ┌──────────────────────────┐
-   Claude / jeder ─▶│  swiss-school-calendar   │
+   Claude / jeder ─▶│  swiss-holidays-mcp      │
    MCP-Host         │  (FastMCP · 10 Tools)    │
                     └────────┬─────────────────┘
                              │  Retry 2s/4s/8s · 12h Cache
@@ -175,14 +175,14 @@ Dieser Server nutzt **Architektur A (Live-API only, mit In-Memory-Cache)**.
 Via [`uv`](https://docs.astral.sh/uv/) `uvx` — kein Klonen oder manuelle Installation nötig:
 
 ```bash
-uvx swiss-school-calendar-mcp
+uvx swiss-holidays-mcp
 ```
 
 ### Entwicklung
 
 ```bash
-git clone https://github.com/malkreide/swiss-school-calendar-mcp
-cd swiss-school-calendar-mcp
+git clone https://github.com/malkreide/swiss-holidays-mcp
+cd swiss-holidays-mcp
 pip install -e ".[dev]"
 ```
 
@@ -200,9 +200,9 @@ In `claude_desktop_config.json` einfügen:
 ```json
 {
   "mcpServers": {
-    "swiss-school-calendar": {
+    "swiss-holidays": {
       "command": "uvx",
-      "args": ["swiss-school-calendar-mcp"]
+      "args": ["swiss-holidays-mcp"]
     }
   }
 }
@@ -215,7 +215,7 @@ Claude Desktop neu starten — der Server startet beim ersten Aufruf automatisch
 Für die Nutzung via **claude.ai im Browser** (z.B. auf verwalteten Arbeitsplätzen ohne lokale Software):
 
 ```bash
-MCP_TRANSPORT=sse PORT=8000 python -m swiss_school_calendar_mcp
+MCP_TRANSPORT=sse PORT=8000 python -m swiss_holidays_mcp
 ```
 
 FastMCP exponiert SSE unter `/sse`, nicht unter `/mcp`.
@@ -233,9 +233,9 @@ FastMCP exponiert SSE unter `/sse`, nicht unter `/mcp`.
 ## Projektstruktur
 
 ```
-swiss-school-calendar-mcp/
+swiss-holidays-mcp/
 ├── src/
-│   └── swiss_school_calendar_mcp/
+│   └── swiss_holidays_mcp/
 │       ├── __init__.py       # Package-Init
 │       ├── __main__.py       # Einstiegspunkt: stdio / SSE / Streamable HTTP
 │       ├── server.py         # FastMCP-Server: Lifespan, 10 Tools, op_*-Logik
@@ -389,4 +389,4 @@ Hayal Oezkan · [github.com/malkreide](https://github.com/malkreide)
 
 MIT-lizenziert. Public money, public code.
 
-<!-- mcp-name: io.github.malkreide/swiss-school-calendar-mcp -->
+<!-- mcp-name: io.github.malkreide/swiss-holidays-mcp -->

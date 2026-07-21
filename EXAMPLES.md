@@ -1,4 +1,4 @@
-# Use Cases & Examples — swiss-school-calendar-mcp
+# Use Cases & Examples — swiss-holidays-mcp
 
 Real-world queries by audience.
 

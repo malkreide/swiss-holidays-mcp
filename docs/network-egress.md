@@ -6,7 +6,7 @@ allow-list).
 ## Code-layer allow-list
 
 The server only ever talks to two fixed, public HTTPS hosts. They are pinned in
-an immutable `frozenset` in [`constants.py`](../src/swiss_school_calendar_mcp/constants.py):
+an immutable `frozenset` in [`constants.py`](../src/swiss_holidays_mcp/constants.py):
 
 | Host | Purpose | Licence |
 |---|---|---|
@@ -14,7 +14,7 @@ an immutable `frozenset` in [`constants.py`](../src/swiss_school_calendar_mcp/co
 | `date.nager.at` | Long weekends / bridge days | MIT |
 
 Every outbound request passes through
-[`guard.py`](../src/swiss_school_calendar_mcp/guard.py) **before the socket is
+[`guard.py`](../src/swiss_holidays_mcp/guard.py) **before the socket is
 opened**:
 
 1. `assert_host_allowed(url)` — rejects any non-HTTPS scheme and any host not in

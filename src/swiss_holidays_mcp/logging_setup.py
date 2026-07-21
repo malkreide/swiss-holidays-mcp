@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import sys
 
-_LOGGER_NAME = "swiss_school_calendar_mcp"
+_LOGGER_NAME = "swiss_holidays_mcp"
 
 
 class _KeyValueFormatter(logging.Formatter):
