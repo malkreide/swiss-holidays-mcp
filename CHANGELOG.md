@@ -46,6 +46,8 @@ open architecture/observability findings. MCP protocol version tested against
   `pip-audit`), nightly live-tests, PyPI trusted-publisher workflow, Dependabot,
   `.gitignore`, CI badge (from the prior CI PR).
 - Dependency: `pydantic-settings>=2.2`; `mcp` pinned to `>=1.2.0,<2`.
+- Packaging: the sdist excludes `audits/`, `docs/` and `.github/`
+  (161 KB → 40 KB); the wheel is unchanged.
 
 ## [0.1.0] — 2026-07-19
 

@@ -45,6 +45,15 @@ Issues = "https://github.com/malkreide/swiss-school-calendar-mcp/issues"
 [tool.hatch.build.targets.wheel]
 packages = ["src/swiss_school_calendar_mcp"]
 
+[tool.hatch.build.targets.sdist]
+# Keep the released sdist lean: ship source, tests, README/CHANGELOG/LICENSE,
+# but not the audit artifacts, docs tree, or CI config.
+exclude = [
+    "/audits",
+    "/docs",
+    "/.github",
+]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 markers = ["live: hits the real upstream API (excluded from CI)"]
