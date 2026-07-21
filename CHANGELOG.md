@@ -3,6 +3,23 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] — 2026-07-21
+
+### Added
+
+- **`export_holidays_ics` tool** — exports a canton's public and/or school
+  holidays for a year as an [RFC 5545](https://www.rfc-editor.org/rfc/rfc5545)
+  iCalendar (`.ics`) document, ready to import into any calendar app. All-day
+  `VEVENT`s with exclusive `DTEND` and `TRANSP:TRANSPARENT`; filterable by
+  `include` (`all` / `public` / `school`) and `school_type`. The writer
+  (`ical.py`) is hand-rolled, adding no new dependency.
+- **`holidays://{canton}/{year}` MCP resource** — a stable URI feed returning a
+  Markdown summary of all public + school holidays for a canton and year, so
+  clients can read a calendar as cacheable context without a tool call. The
+  server now exposes **12 tools + 1 resource**.
+- **`is_holiday_today` tool** — one-call convenience answering whether today is a
+  school or public holiday in a given canton.
+
 ## [0.3.0] — 2026-07-21
 
 ### Changed (breaking)

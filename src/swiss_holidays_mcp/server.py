@@ -6,9 +6,10 @@ FastMCP lifespan and injected into every tool via ``Context``. The tool
 functions are thin wrappers over transport-agnostic ``op_*`` operations, which
 keeps them testable without a live transport.
 
-Tool budget: 10 of the 15-20 recommended maximum, leaving headroom for a
-Phase 2 extension (city-level Zurich specifics such as Sechselaeuten and
-Knabenschiessen, which are not public holidays and therefore absent upstream).
+Primitives: 12 tools + 1 resource (``holidays://{canton}/{year}``) — within the
+15-20 recommended tool budget, with headroom for a Phase 2 extension (city-level
+Zurich specifics such as Sechselaeuten and Knabenschiessen, which are not public
+holidays and therefore absent upstream).
 """
 
 from __future__ import annotations
@@ -42,6 +43,7 @@ from .constants import (
     OPENHOLIDAYS_BASE,
     SCHOOL_TYPE_SUFFIX,
 )
+from .ical import build_ics
 from .logging_setup import get_logger
 from .models import (
     Canton,
@@ -50,6 +52,7 @@ from .models import (
     FreeWindow,
     HolidayListResponse,
     HolidayPeriod,
+    IcsResponse,
     LongWeekend,
     LongWeekendResponse,
     OverlapResponse,
@@ -103,6 +106,7 @@ IsoDate = Annotated[str, Field(pattern=r"^\d{4}-\d{2}-\d{2}$", description="Date
 Year = Annotated[int, Field(ge=MIN_YEAR, le=MAX_YEAR)]
 SchoolTypeCode = Annotated[str | None, Field(pattern=r"^(?i:VS|MS|BS|EO)$")]
 Language = Annotated[str, Field(pattern=r"^(?i:DE|FR|IT|EN)$")]
+Include = Annotated[str, Field(pattern=r"^(?i:all|public|school)$")]
 
 
 # --------------------------------------------------------------- helpers
@@ -521,6 +525,73 @@ async def op_source_status(client: HolidayClient) -> StatusResponse:
     )
 
 
+async def op_holidays_bundle(
+    client: HolidayClient,
+    canton: str,
+    year: int,
+    include: str = "all",
+    school_type: str | None = None,
+    language: str = "DE",
+) -> tuple[str, list[HolidayPeriod], str, str]:
+    """Fetch a canton's public and/or school holidays for a whole year.
+
+    Shared by the ICS export and the ``holidays://`` resource. Raises
+    ``UpstreamError`` on failure; callers turn that into a degraded envelope.
+    """
+    lang = normalise_language(language)
+    canton_code = _require_known_canton(canton)
+    mode = include.lower()
+    frm, to = f"{year}-01-01", f"{year}-12-31"
+
+    want_school = mode in ("all", "school")
+    want_public = mode in ("all", "public")
+    calls = []
+    if want_school:
+        calls.append(client.school_holidays(frm, to, lang, canton_code))
+    if want_public:
+        calls.append(client.public_holidays(frm, to, lang, canton_code))
+    results = await asyncio.gather(*calls)
+
+    periods: list[HolidayPeriod] = []
+    provenance, stamp = "live_api", utc_now_iso()
+    cursor = 0
+    if want_school:
+        raw, provenance, stamp = results[cursor]
+        cursor += 1
+        periods += [
+            p
+            for p in (_to_period(e, lang, "School") for e in raw)
+            if _matches_school_type(p, school_type)
+        ]
+    if want_public:
+        raw, provenance, stamp = results[cursor]
+        periods += [_to_period(e, lang, "Public") for e in raw]
+
+    periods.sort(key=lambda p: (p.start_date, p.kind))
+    return canton_code, periods, provenance, stamp
+
+
+def _bundle_markdown(canton: str, year: int, periods: list[HolidayPeriod], source: str) -> str:
+    public = [p for p in periods if p.kind == "Public"]
+    school = [p for p in periods if p.kind == "School"]
+    lines = [f"# Holidays {canton} {year}", ""]
+    if not periods:
+        lines.append("_No holidays found for this canton and year._")
+    for label, items in (("Public holidays", public), ("School holidays", school)):
+        if not items:
+            continue
+        lines += [f"## {label}", ""]
+        for p in items:
+            span = f"{p.start_date:%Y-%m-%d}" + (
+                f" → {p.end_date:%Y-%m-%d} ({p.days} days)" if p.days > 1 else ""
+            )
+            suffix = f" — {', '.join(p.school_types)}" if p.school_types else ""
+            lines.append(f"- **{p.name}**: {span}{suffix}")
+        lines.append("")
+    lines.append(f"> Source: {source}")
+    return "\n".join(lines)
+
+
 # ----------------------------------------------------------------- tools
 
 
@@ -669,6 +740,87 @@ async def source_status(ctx: Context) -> StatusResponse:
     "no data" can be distinguished from "source down".
     """
     return await op_source_status(_client(ctx))
+
+
+@mcp.tool(annotations=_RO)
+async def export_holidays_ics(
+    ctx: Context,
+    canton: CantonCode,
+    year: Year,
+    include: Include = "all",
+    school_type: SchoolTypeCode = None,
+    language: Language = "DE",
+) -> IcsResponse:
+    """Export a canton's holidays for a year as an iCalendar (.ics) document.
+
+    Returns a ready-to-save `text/calendar` document with one all-day event per
+    holiday. `include` selects `all` (default), `public` or `school`; combine
+    with `school_type` (`VS`/`MS`/`BS`/`EO`) to narrow school holidays.
+    """
+    try:
+        canton_code, periods, provenance, stamp = await op_holidays_bundle(
+            _client(ctx), canton, year, include, school_type, language
+        )
+    except UpstreamError:
+        return IcsResponse(
+            **_degraded("ics", _OH),
+            canton=canton.strip().upper(),
+            year=year,
+            event_count=0,
+            filename=f"holidays-{canton.strip().upper()}-{year}.ics",
+            ics="",
+        )
+
+    ics = build_ics(
+        (p.model_dump() for p in periods),
+        calendar_name=f"Swiss holidays {canton_code} {year}",
+        source=_OH,
+    )
+    return IcsResponse(
+        source=_OH,
+        provenance=provenance,
+        retrieved_at=stamp,
+        canton=canton_code,
+        year=year,
+        event_count=len(periods),
+        filename=f"holidays-{canton_code}-{year}.ics",
+        ics=ics,
+    )
+
+
+@mcp.tool(annotations=_RO)
+async def is_holiday_today(
+    ctx: Context, canton: CantonCode, school_type: SchoolTypeCode = None, language: Language = "DE"
+) -> DateCheckResponse:
+    """Is today a school or public holiday in the given canton?
+
+    Convenience wrapper over `check_date` for the everyday question
+    "are we off today?".
+    """
+    return await op_check_date(
+        _client(ctx), date.today().isoformat(), canton, school_type, language
+    )
+
+
+@mcp.resource("holidays://{canton}/{year}")
+async def holidays_resource(canton: str, year: str, ctx: Context) -> str:
+    """All public + school holidays for a canton and year, as a Markdown feed.
+
+    URI example: `holidays://CH-ZH/2026`.
+    """
+    try:
+        parsed_year = int(year)
+    except ValueError:
+        return f"Invalid year {year!r}. Use e.g. holidays://CH-ZH/2026."
+    if not MIN_YEAR <= parsed_year <= MAX_YEAR:
+        return f"Year {parsed_year} is out of the supported range {MIN_YEAR}-{MAX_YEAR}."
+    try:
+        canton_code, periods, _, _ = await op_holidays_bundle(_client(ctx), canton, parsed_year)
+    except ValueError as exc:
+        return str(exc)
+    except UpstreamError:
+        return "The upstream source is currently unavailable. Please retry shortly."
+    return _bundle_markdown(canton_code, parsed_year, periods, _OH)
 
 
 __all__ = ["mcp", "SCHOOL_TYPE_SUFFIX"]
