@@ -39,6 +39,7 @@ Der Server deckt zwei thematische Cluster ab: **Feiertage / lange Wochenenden** 
 - 🔗 **Interkantonaler Vergleich** — paarweise Überschneidungsmatrix der Ferientage zwischen Kantonen
 - 🪟 **Gemeinsame freie Fenster** — Zeiträume, in denen alle genannten Kantone gleichzeitig Ferien haben
 - 🌉 **Lange Wochenenden & Brückentage** — berechnet aus eidgenössischen Feiertagen (Nager.Date)
+- 🏘️ **Lokale & kommunale Feiertage** — Besonderheiten auf Bezirks- und Gemeindeebene wie Zürichs Sechseläuten und Knabenschiessen, mit `scope`-Markierung, damit sie nie mit kantonsweiten verwechselt werden
 - 📆 **iCal-/ICS-Export** — die Feiertage eines Kantons für ein Jahr als importfertiger `.ics`-Kalender
 - 🔖 **Feiertags-Feed-Resource** — `holidays://<kanton>/<jahr>` als MCP-Resource mit Markdown-Übersicht
 - 📌 **«Ist heute ein Feiertag?»** — Ein-Aufruf-Komfort für die Alltagsfrage
@@ -69,6 +70,7 @@ Beide Quellen sind öffentlich zugänglich, keine Authentifizierung nötig.
 | `list_school_types` | *Schulart*-Gruppen pro Kanton (`CH-ZH-VS` usw.) | OpenHolidays |
 | `get_school_holidays` | Schulferien für einen Kanton und Zeitraum | OpenHolidays |
 | `get_public_holidays` | Feiertage für einen Kanton und ein Jahr | OpenHolidays |
+| `get_local_holidays` | Feiertage einer Gemeinde oder eines Bezirks, inkl. lokaler Besonderheiten | OpenHolidays |
 | `check_date` | Ist ein bestimmtes Datum Schulferien oder Feiertag? | OpenHolidays |
 | `compare_school_holidays` | Paarweise Überschneidungsmatrix über Kantone | OpenHolidays |
 | `find_common_free_window` | Fenster, in denen alle genannten Kantone Ferien haben | OpenHolidays |
@@ -97,6 +99,7 @@ Alle Tools tragen den vollständigen Annotations-Satz — `readOnlyHint: true`, 
 | *«Wann können ZH, ZG und AG eine gemeinsame schulfreie Woche planen?»* | `find_common_free_window` |
 | *«Was sind die nächsten Ferien der Basler Schulen?»* | `next_school_holidays` |
 | *«Welche langen Wochenenden hat 2026, und welche Brückentage brauchen sie?»* | `get_long_weekends` |
+| *«Welche lokalen Feiertage kennt die Stadt Zürich, die der Rest des Kantons nicht hat?»* | `get_local_holidays` |
 | *«Exportiere Zürichs Feiertage 2026 als .ics-Kalender zum Importieren»* | `export_holidays_ics` |
 | *«Ist heute im Aargau ein Feiertag?»* | `is_holiday_today` |
 
@@ -124,7 +127,7 @@ Dieser Server nutzt **Architektur A (Live-API only, mit In-Memory-Cache)**.
 ```
                     ┌──────────────────────────┐
    Claude / jeder ─▶│  swiss-holidays-mcp      │
-   MCP-Host         │  (FastMCP · 12 Tools)    │
+   MCP-Host         │  (FastMCP · 13 Tools)    │
                     └────────┬─────────────────┘
                              │  Retry 2s/4s/8s · 12h Cache
                     ┌────────┴─────────┐
@@ -251,7 +254,7 @@ swiss-holidays-mcp/
 │   └── swiss_holidays_mcp/
 │       ├── __init__.py       # Package-Init
 │       ├── __main__.py       # Einstiegspunkt: stdio / SSE / Streamable HTTP
-│       ├── server.py         # FastMCP-Server: Lifespan, 12 Tools, 1 Resource, op_*-Logik
+│       ├── server.py         # FastMCP-Server: Lifespan, 13 Tools, 1 Resource, op_*-Logik
 │       ├── client.py         # Geteilter HTTP-Client: Retry, 12h-Cache, Egress-Guard
 │       ├── guard.py          # Egress-/SSRF-Guard (HTTPS + Allow-List + IP-Blocklist)
 │       ├── ical.py           # RFC-5545-iCalendar-(.ics)-Writer
@@ -288,16 +291,17 @@ swiss-holidays-mcp/
 ## Lifecycle-Phase
 
 Dieser Server ist in **Phase 1 (nur lesend)** — alle Tools nur lesend, keine
-Authentifizierung, keine Seiteneffekte. Das 12-Tool-Budget (vom empfohlenen Maximum
-von 15–20) lässt bewusst Spielraum für eine Phase-2-Erweiterung: Stadtzürcher
-Besonderheiten wie Sechseläuten und Knabenschiessen, die upstream weder Feiertag
-noch Schulferien sind und via [`zurich-opendata-mcp`](https://github.com/malkreide/zurich-opendata-mcp) kämen.
+Authentifizierung, keine Seiteneffekte. Das 13-Tool-Budget (vom empfohlenen Maximum
+von 15–20) lässt weiterhin Spielraum. Lokale und kommunale Besonderheiten — inklusive
+Zürichs Sechseläuten und Knabenschiessen — werden direkt aus OpenHolidays über
+`get_local_holidays` abgedeckt (eine Live-Probe zeigte, dass sie upstream auf
+Gemeindeebene publiziert sind); dafür ist keine separate Stadt-Datenquelle nötig.
 
 ---
 
 ## MCP-Primitive & Protokoll-Version
 
-- **Primitive — Tools + Resources.** Die 12 Tools sind idempotente,
+- **Primitive — Tools + Resources.** Die 13 Tools sind idempotente,
   seiteneffektfreie `GET`s. Eine **Resource** exponiert einen stabilen URI-Feed
   (`holidays://<kanton>/<jahr>`), damit Clients den Kalender eines Kantons als
   cachebaren Kontext lesen können, ohne einen Tool-Aufruf. Es gibt keine
@@ -321,7 +325,7 @@ Server verarbeitete Stufe; das vollständige Modell steht in
 ## Bekannte Einschränkungen
 
 - **Inoffizielle Quelle.** OpenHolidays aggregiert kantonale Publikationen. Rechtsverbindlich bleibt die kantonale Behörde. Jede Antwort weist darauf hin.
-- **Keine kommunale Ebene.** Stadtzürcher Besonderheiten wie Sechseläuten und Knabenschiessen sind upstream weder Feiertag noch Schulferien und deshalb nicht enthalten. Kandidat für Phase 2 über `zurich-opendata-mcp`.
+- **Kommunale Abdeckung hängt vom Upstream ab.** OpenHolidays führt Feiertage auf Bezirks- und Gemeindeebene (z.B. Sechseläuten, Knabenschiessen unter `CH-ZH-ZH-ZH`), abrufbar über `get_local_holidays`. Die Vollständigkeit auf Gemeindeebene ist nur so gut wie die Upstream-Daten und variiert je Kanton. Kommunale *Schul*ferien sind nicht separat modelliert.
 - **Nagers lange Wochenenden ignorieren kantonale Feiertage.** Sie werden nur aus schweizweiten Feiertagen berechnet.
 - **Keine garantierte historische Tiefe.** Die Abdeckung vor rund 2020 ist ungleichmässig.
 

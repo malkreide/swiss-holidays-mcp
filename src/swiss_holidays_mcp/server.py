@@ -6,7 +6,7 @@ FastMCP lifespan and injected into every tool via ``Context``. The tool
 functions are thin wrappers over transport-agnostic ``op_*`` operations, which
 keeps them testable without a live transport.
 
-Primitives: 12 tools + 1 resource (``holidays://{canton}/{year}``) — within the
+Primitives: 13 tools + 1 resource (``holidays://{canton}/{year}``) — within the
 15-20 recommended tool budget, with headroom for a Phase 2 extension (city-level
 Zurich specifics such as Sechselaeuten and Knabenschiessen, which are not public
 holidays and therefore absent upstream).
@@ -61,6 +61,7 @@ from .models import (
     SchoolTypeListResponse,
     SourceStatus,
     StatusResponse,
+    Subdivision,
     WindowResponse,
 )
 
@@ -122,6 +123,26 @@ def _canton_of(code: str) -> str:
     return "-".join(parts[:2]) if len(parts) >= 2 else code
 
 
+def _level_of(code: str) -> str:
+    """CH-ZH -> cantonal, CH-ZH-ZH -> district (Bezirk), CH-ZH-ZH-ZH -> municipal."""
+    return {2: "district", 3: "municipal"}.get(code.count("-"), "cantonal")
+
+
+_SCOPE_MAP = {"National": "national", "Regional": "regional", "Local": "local"}
+
+
+def _scope_of(raw: dict[str, Any]) -> str:
+    """Map upstream ``regionalScope`` to national | regional | local.
+
+    Falls back to nationwide when the field is absent (e.g. school holidays), so
+    the value is always populated.
+    """
+    scope = _SCOPE_MAP.get(raw.get("regionalScope", ""))
+    if scope:
+        return scope
+    return "national" if raw.get("nationwide") else "regional"
+
+
 def _require_known_canton(code: str) -> str:
     """Normalise + validate a canton against the 26 known codes (SEC-018)."""
     normalised = code.strip().upper()
@@ -135,14 +156,29 @@ def _require_known_canton(code: str) -> str:
 def _to_period(raw: dict[str, Any], language: str, kind: str) -> HolidayPeriod:
     start = date.fromisoformat(raw["startDate"])
     end = date.fromisoformat(raw["endDate"])
-    cantons = sorted({_canton_of(s["code"]) for s in raw.get("subdivisions", [])})
+    subs_raw = raw.get("subdivisions") or []
+    cantons = sorted({_canton_of(s["code"]) for s in subs_raw})
+    # Keep only sub-cantonal areas: those the canton roll-up cannot represent
+    # (Bezirk / Gemeinde). This is where the flattening bug used to lose fidelity.
+    subdivisions = [
+        Subdivision(
+            code=s["code"],
+            name=s.get("shortName") or s["code"],
+            level=_level_of(s["code"]),  # type: ignore[arg-type]
+        )
+        for s in subs_raw
+        if s["code"].count("-") >= 2
+    ]
     return HolidayPeriod(
         start_date=start,
         end_date=end,
         name=pick_text(raw.get("name"), language),
         kind=kind,  # type: ignore[arg-type]
         nationwide=bool(raw.get("nationwide")),
+        scope=_scope_of(raw),  # type: ignore[arg-type]
+        half_day=raw.get("temporalScope") == "HalfDay",
         cantons=cantons,
+        subdivisions=subdivisions,
         school_types=[g["code"] for g in raw.get("groups", [])],
         days=(end - start).days + 1,
     )
@@ -291,6 +327,109 @@ async def op_get_public_holidays(
         source=_OH,
         provenance=provenance,
         retrieved_at=stamp,
+        count=len(periods),
+        holidays=periods,
+    )
+
+
+def _flatten_localities(tree: list[dict[str, Any]], canton_code: str, lang: str) -> list[tuple]:
+    """Return (code, name, level) for every district/municipality under a canton."""
+    out: list[tuple] = []
+
+    def walk(node: dict[str, Any]) -> None:
+        code = node.get("code", "")
+        if code.count("-") >= 2:  # Bezirk or Gemeinde
+            out.append((code, pick_text(node.get("name"), lang), _level_of(code)))
+        for child in node.get("children") or []:
+            walk(child)
+
+    for canton in tree:
+        if canton.get("code") == canton_code:
+            for child in canton.get("children") or []:
+                walk(child)
+            break
+    return out
+
+
+def _resolve_locality(
+    tree: list[dict[str, Any]], canton_code: str, query: str, lang: str
+) -> tuple[str | None, str, list[str]]:
+    """Resolve a district/municipality name *or* code within a canton to its code.
+
+    Returns ``(code, display_name, candidates)``. ``code`` is ``None`` on no match,
+    in which case ``candidates`` holds a few near suggestions for the error note.
+    """
+    areas = _flatten_localities(tree, canton_code, lang)
+    q = query.strip()
+    qu = q.upper()
+    for code, name, _level in areas:  # exact code, e.g. "CH-ZH-ZH-ZH"
+        if code.upper() == qu:
+            return code, name, []
+    ql = q.lower()
+    exact = [a for a in areas if a[1].lower() == ql]
+    if exact:  # a municipality wins over a same-named district
+        exact.sort(key=lambda a: 0 if a[2] == "municipal" else 1)
+        return exact[0][0], exact[0][1], []
+    prefix = [a for a in areas if a[1].lower().startswith(ql)]
+    if len(prefix) == 1:
+        return prefix[0][0], prefix[0][1], []
+    candidates = sorted({a[1] for a in areas if ql in a[1].lower()})[:8]
+    return None, "", candidates
+
+
+async def op_get_local_holidays(
+    client: HolidayClient,
+    canton: str,
+    municipality: str,
+    year: int,
+    language: str = "DE",
+) -> HolidayListResponse:
+    lang = normalise_language(language)
+    canton_code = _require_known_canton(canton)
+    try:
+        tree, _prov, _stamp = await client.subdivisions(lang)
+    except UpstreamError:
+        return HolidayListResponse(**_degraded("subdivisions", _OH), count=0, holidays=[])
+
+    code, display, candidates = _resolve_locality(tree, canton_code, municipality, lang)
+    if code is None:
+        hint = f" Did you mean: {', '.join(candidates)}?" if candidates else ""
+        return HolidayListResponse(
+            source=_OH,
+            provenance="degraded",
+            retrieved_at=utc_now_iso(),
+            note=f"No district or municipality matching {municipality!r} in {canton_code}.{hint}",
+            count=0,
+            holidays=[],
+        )
+
+    try:
+        raw, provenance, stamp = await client.public_holidays(
+            f"{year}-01-01", f"{year}-12-31", lang, code
+        )
+    except UpstreamError:
+        return HolidayListResponse(**_degraded("public_holidays", _OH), count=0, holidays=[])
+
+    periods = sorted(
+        (_to_period(entry, lang, "Public") for entry in raw), key=lambda p: p.start_date
+    )
+    local = [p.name for p in periods if p.scope == "local"]
+    if local:
+        local_note = f"Specific to {display}: {', '.join(local)}."
+    else:
+        local_note = (
+            f"{display} has no locality-specific public holidays this year — all listed "
+            "holidays are inherited from the canton or the confederation."
+        )
+    note = (
+        f"Resolved {municipality!r} → {code} ({display}). {local_note} Holidays with "
+        "scope 'regional' or 'national' are inherited, not locality-specific."
+    )
+    return HolidayListResponse(
+        source=_OH,
+        provenance=provenance,
+        retrieved_at=stamp,
+        note=note,
         count=len(periods),
         holidays=periods,
     )
@@ -656,6 +795,28 @@ async def get_public_holidays(
     Switzerland, so always pass the canton rather than assuming the federal set.
     """
     return await op_get_public_holidays(_client(ctx), canton, year, language)
+
+
+@mcp.tool(annotations=_RO)
+async def get_local_holidays(
+    ctx: Context,
+    canton: CantonCode,
+    municipality: str,
+    year: Year,
+    language: Language = "DE",
+) -> HolidayListResponse:
+    """Public holidays for a single municipality or district, incl. local specifics.
+
+    Answers the local question the canton-level tools flatten away: which holidays
+    are observed *only* here? The city of Zurich, for example, keeps Sechseläuten
+    and Knabenschiessen (both half-day), which the rest of the canton does not.
+
+    `municipality` accepts a name (e.g. "Zürich", "Morschach") or a full
+    subdivision code (e.g. "CH-ZH-ZH-ZH"). The result lists every holiday that
+    applies in that locality; each carries a `scope` of `local` (specific to this
+    place), `regional` (inherited from the canton/district) or `national`.
+    """
+    return await op_get_local_holidays(_client(ctx), canton, municipality, year, language)
 
 
 @mcp.tool(annotations=_RO)

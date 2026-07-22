@@ -41,13 +41,43 @@ class SchoolType(BaseModel):
     name: str = Field(description="Schulart label, e.g. 'Volksschulen'.")
 
 
+class Subdivision(BaseModel):
+    """A sub-cantonal area a holiday applies to (district or municipality).
+
+    Only carried for holidays that are *not* canton-wide — these are the ones the
+    ``cantons`` roll-up cannot represent (e.g. Sechseläuten, which is observed only
+    in the municipality of Zurich, ``CH-ZH-ZH-ZH``).
+    """
+
+    code: str = Field(description="ISO subdivision code, e.g. CH-ZH-ZH-ZH.")
+    name: str = Field(description="Short name of the district or municipality.")
+    level: Literal["district", "municipal"] = Field(
+        description="'district' (Bezirk, CH-XX-YY) or 'municipal' (Gemeinde, CH-XX-YY-ZZ)."
+    )
+
+
 class HolidayPeriod(BaseModel):
     start_date: date
     end_date: date
     name: str
     kind: Literal["School", "Public"]
     nationwide: bool
+    scope: Literal["national", "regional", "local"] = Field(
+        default="regional",
+        description="Upstream regionalScope: 'national' (whole country), 'regional' "
+        "(canton or district), 'local' (single municipality, e.g. Sechseläuten).",
+    )
+    half_day: bool = Field(
+        default=False,
+        description="True when the holiday is observed for half a day only "
+        "(upstream temporalScope 'HalfDay'), e.g. Sechseläuten, Knabenschiessen.",
+    )
     cantons: list[str] = Field(default_factory=list)
+    subdivisions: list[Subdivision] = Field(
+        default_factory=list,
+        description="Sub-cantonal areas (district/municipality) the holiday applies "
+        "to. Empty for canton-wide or nationwide holidays.",
+    )
     school_types: list[str] = Field(
         default_factory=list,
         description="Group codes, e.g. ['CH-ZH-VS']. Empty when the canton does "
