@@ -3,6 +3,34 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0] — 2026-07-22
+
+Local / municipal holidays. A live probe of OpenHolidays revealed that
+sub-cantonal holidays — including the city of Zurich's Sechseläuten and
+Knabenschiessen — are already published upstream at Bezirk (district) and
+Gemeinde (municipality) level, and that the server was **flattening them onto
+the canton**, presenting a city-only holiday as canton-wide.
+
+### Added
+
+- **`get_local_holidays` tool** — public holidays for a single municipality or
+  district. Accepts a name (e.g. `"Zürich"`, `"Morschach"`) or a full
+  subdivision code (e.g. `"CH-ZH-ZH-ZH"`), resolved against the OpenHolidays
+  subdivision tree. Returns every holiday that applies in that locality and
+  names the ones specific to it. The server now exposes **13 tools + 1
+  resource**.
+- **Sub-cantonal fidelity on `HolidayPeriod`** — new fields `scope`
+  (`national` / `regional` / `local`, from upstream `regionalScope`), `half_day`
+  (upstream `temporalScope`, e.g. Sechseläuten is a half day) and `subdivisions`
+  (the precise district/municipality codes + names + level). Every tool that
+  returns holidays now carries this, so a locality-specific holiday is no longer
+  indistinguishable from a canton-wide one.
+
+### Fixed
+
+- Holidays observed only in one municipality (Sechseläuten, Knabenschiessen,
+  Gallustag, …) are no longer reported as if they applied to the whole canton.
+
 ## [0.4.0] — 2026-07-21
 
 ### Added

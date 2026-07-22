@@ -24,7 +24,7 @@ MCP_PROTOCOL_VERSION = "2025-06-18"
 MIN_YEAR = 1970
 MAX_YEAR = 2100
 
-USER_AGENT = "swiss-holidays-mcp/0.4.0 (+https://github.com/malkreide/swiss-holidays-mcp)"
+USER_AGENT = "swiss-holidays-mcp/0.5.0 (+https://github.com/malkreide/swiss-holidays-mcp)"
 
 ATTRIBUTION_OPENHOLIDAYS = (
     "Data: OpenHolidays API (openholidaysapi.org) — CC BY 4.0. "

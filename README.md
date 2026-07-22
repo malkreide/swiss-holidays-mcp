@@ -39,6 +39,7 @@ The server covers two thematic clusters: **public holidays / long weekends** and
 - 🔗 **Cross-cantonal comparison** — pairwise overlap matrix of holiday days between cantons
 - 🪟 **Common free windows** — date ranges where all listed cantons are simultaneously on holiday
 - 🌉 **Long weekends & bridge days** — computed from federal public holidays (Nager.Date)
+- 🏘️ **Local & municipal holidays** — district- and municipality-level specifics such as Zurich's Sechseläuten and Knabenschiessen, with a `scope` marker so they are never mistaken for canton-wide
 - 📆 **iCal / ICS export** — a canton's holidays for a year as a ready-to-import `.ics` calendar
 - 🔖 **Holiday feed resource** — `holidays://<canton>/<year>` MCP resource with a Markdown summary
 - 📌 **"Is today a holiday?"** — one-call convenience for the everyday question
@@ -69,6 +70,7 @@ Both sources are publicly accessible, no authentication required.
 | `list_school_types` | *Schulart* groups per canton (`CH-ZH-VS` etc.) | OpenHolidays |
 | `get_school_holidays` | School holidays for one canton and date range | OpenHolidays |
 | `get_public_holidays` | Public holidays for one canton and year | OpenHolidays |
+| `get_local_holidays` | Public holidays for one municipality or district, incl. local specifics | OpenHolidays |
 | `check_date` | Is a given date a school or public holiday? | OpenHolidays |
 | `compare_school_holidays` | Pairwise overlap matrix across cantons | OpenHolidays |
 | `find_common_free_window` | Windows where all listed cantons are on holiday | OpenHolidays |
@@ -97,6 +99,7 @@ All tools carry the full annotation set — `readOnlyHint: true`, `destructiveHi
 | *"When can all of ZH, ZG, AG plan a joint week off school?"* | `find_common_free_window` |
 | *"What are the next holidays for Basel-Stadt schools?"* | `next_school_holidays` |
 | *"Which long weekends does 2026 have, and which bridge days do they need?"* | `get_long_weekends` |
+| *"Which local holidays does the city of Zurich keep that the rest of the canton doesn't?"* | `get_local_holidays` |
 | *"Export Zurich's 2026 holidays as an .ics calendar I can import"* | `export_holidays_ics` |
 | *"Is today a holiday in Aargau?"* | `is_holiday_today` |
 
@@ -124,7 +127,7 @@ This server uses **Architecture A (live API only, with in-memory cache)**.
 ```
                     ┌──────────────────────────┐
    Claude / any ───▶│  swiss-holidays-mcp      │
-   MCP host         │  (FastMCP · 12 tools)    │
+   MCP host         │  (FastMCP · 13 tools)    │
                     └────────┬─────────────────┘
                              │  retry 2s/4s/8s · 12h cache
                     ┌────────┴─────────┐
@@ -251,7 +254,7 @@ swiss-holidays-mcp/
 │   └── swiss_holidays_mcp/
 │       ├── __init__.py       # Package init
 │       ├── __main__.py       # Entry point: stdio / SSE / Streamable HTTP
-│       ├── server.py         # FastMCP server: lifespan, 12 tools, 1 resource, op_* logic
+│       ├── server.py         # FastMCP server: lifespan, 13 tools, 1 resource, op_* logic
 │       ├── client.py         # Shared HTTP client: retry, 12h cache, egress guard
 │       ├── guard.py          # Egress / SSRF guard (HTTPS + allow-list + IP blocklist)
 │       ├── ical.py           # RFC 5545 iCalendar (.ics) writer
@@ -288,16 +291,17 @@ swiss-holidays-mcp/
 ## Lifecycle Phase
 
 This server is in **Phase 1 (read-only)** — all tools read-only, no auth, no side
-effects. The 12-tool budget (of the 15–20 recommended maximum) deliberately leaves
-headroom for a Phase 2 extension: city-level Zurich specifics such as Sechseläuten
-and Knabenschiessen, which are neither public holidays nor school holidays upstream
-and would arrive via [`zurich-opendata-mcp`](https://github.com/malkreide/zurich-opendata-mcp).
+effects. The 13-tool budget (of the 15–20 recommended maximum) still leaves
+headroom. Local and municipal specifics — including Zurich's Sechseläuten and
+Knabenschiessen — are covered directly from OpenHolidays via `get_local_holidays`
+(a live probe showed they are published upstream at Gemeinde level), so no
+separate city data source is required for them.
 
 ---
 
 ## MCP Primitives & Protocol Version
 
-- **Primitives — Tools + Resources.** The 12 tools are idempotent,
+- **Primitives — Tools + Resources.** The 13 tools are idempotent,
   side-effect-free `GET`s. A **Resource** exposes a stable URI feed
   (`holidays://<canton>/<year>`) so clients can read a canton's calendar as
   cacheable context without a tool call. There are no recurring templated
@@ -318,7 +322,7 @@ handles; the full model is in [`docs/security.md`](docs/security.md).
 ## Known Limitations
 
 - **Unofficial source.** OpenHolidays aggregates cantonal publications. For legally binding dates, the cantonal authority remains authoritative. Every response says so.
-- **No municipal layer.** Zurich city specifics such as Sechseläuten and Knabenschiessen are neither public holidays nor school holidays upstream, and are therefore absent. Candidate for Phase 2 via `zurich-opendata-mcp`.
+- **Municipal coverage depends on the upstream.** OpenHolidays does carry district- and municipality-level public holidays (e.g. Sechseläuten, Knabenschiessen at `CH-ZH-ZH-ZH`), exposed through `get_local_holidays`. Completeness at Gemeinde level is only as good as the upstream data, which varies by canton. Municipal *school* holidays are not separately modelled.
 - **Nager long weekends ignore cantonal holidays.** They are computed from nationwide holidays only.
 - **No historical depth guarantee.** Coverage of years before roughly 2020 is uneven.
 
