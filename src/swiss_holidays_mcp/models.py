@@ -130,3 +130,11 @@ class StatusResponse(Envelope):
     )
     sources: list[SourceStatus]
     all_healthy: bool
+
+
+class IcsResponse(Envelope):
+    canton: str
+    year: int
+    event_count: int = Field(description="Number of VEVENTs in the calendar.")
+    filename: str = Field(description="Suggested file name, e.g. holidays-CH-ZH-2026.ics.")
+    ics: str = Field(description="The full iCalendar (text/calendar) document.")

@@ -39,6 +39,9 @@ Der Server deckt zwei thematische Cluster ab: **Feiertage / lange Wochenenden** 
 - 🔗 **Interkantonaler Vergleich** — paarweise Überschneidungsmatrix der Ferientage zwischen Kantonen
 - 🪟 **Gemeinsame freie Fenster** — Zeiträume, in denen alle genannten Kantone gleichzeitig Ferien haben
 - 🌉 **Lange Wochenenden & Brückentage** — berechnet aus eidgenössischen Feiertagen (Nager.Date)
+- 📆 **iCal-/ICS-Export** — die Feiertage eines Kantons für ein Jahr als importfertiger `.ics`-Kalender
+- 🔖 **Feiertags-Feed-Resource** — `holidays://<kanton>/<jahr>` als MCP-Resource mit Markdown-Übersicht
+- 📌 **«Ist heute ein Feiertag?»** — Ein-Aufruf-Komfort für die Alltagsfrage
 - 🩺 **Quellen-Health** — Erreichbarkeit und Latenz beider Quellen, immer auswertbar
 - 🔑 **Keine Authentifizierung nötig** — beide Datenquellen sind öffentlich zugänglich
 - ☁️ **Dual Transport** — stdio für Claude Desktop, Streamable HTTP/SSE für Cloud-Deployment
@@ -71,7 +74,15 @@ Beide Quellen sind öffentlich zugänglich, keine Authentifizierung nötig.
 | `find_common_free_window` | Fenster, in denen alle genannten Kantone Ferien haben | OpenHolidays |
 | `next_school_holidays` | Die nächsten anstehenden Ferienperioden | OpenHolidays |
 | `get_long_weekends` | Lange Wochenenden und nötige Brückentage | Nager.Date |
+| `export_holidays_ics` | Die Feiertage eines Kantons für ein Jahr als iCalendar (`.ics`) | OpenHolidays |
+| `is_holiday_today` | Ist heute in einem Kanton Schulferien oder Feiertag? | OpenHolidays |
 | `source_status` | Erreichbarkeit und Latenz beider Quellen | Eingebaut |
+
+### Resources
+
+| Resource-URI | Inhalt |
+|---|---|
+| `holidays://{kanton}/{jahr}` | Markdown-Übersicht aller Feier- + Schulferien, z.B. `holidays://CH-ZH/2026` |
 
 Alle Tools tragen den vollständigen Annotations-Satz — `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: true` (sie erreichen eine externe API). Kein Tool schreibt irgendwohin. Inputs sind schema-validiert (Kantonscodes gegen die 26 bekannten Kantone, Datum als `YYYY-MM-DD`, `year` begrenzt, `language`/`school_type` per Whitelist).
 
@@ -86,6 +97,8 @@ Alle Tools tragen den vollständigen Annotations-Satz — `readOnlyHint: true`, 
 | *«Wann können ZH, ZG und AG eine gemeinsame schulfreie Woche planen?»* | `find_common_free_window` |
 | *«Was sind die nächsten Ferien der Basler Schulen?»* | `next_school_holidays` |
 | *«Welche langen Wochenenden hat 2026, und welche Brückentage brauchen sie?»* | `get_long_weekends` |
+| *«Exportiere Zürichs Feiertage 2026 als .ics-Kalender zum Importieren»* | `export_holidays_ics` |
+| *«Ist heute im Aargau ein Feiertag?»* | `is_holiday_today` |
 
 ---
 
@@ -111,7 +124,7 @@ Dieser Server nutzt **Architektur A (Live-API only, mit In-Memory-Cache)**.
 ```
                     ┌──────────────────────────┐
    Claude / jeder ─▶│  swiss-holidays-mcp      │
-   MCP-Host         │  (FastMCP · 10 Tools)    │
+   MCP-Host         │  (FastMCP · 12 Tools)    │
                     └────────┬─────────────────┘
                              │  Retry 2s/4s/8s · 12h Cache
                     ┌────────┴─────────┐
@@ -238,9 +251,10 @@ swiss-holidays-mcp/
 │   └── swiss_holidays_mcp/
 │       ├── __init__.py       # Package-Init
 │       ├── __main__.py       # Einstiegspunkt: stdio / SSE / Streamable HTTP
-│       ├── server.py         # FastMCP-Server: Lifespan, 10 Tools, op_*-Logik
+│       ├── server.py         # FastMCP-Server: Lifespan, 12 Tools, 1 Resource, op_*-Logik
 │       ├── client.py         # Geteilter HTTP-Client: Retry, 12h-Cache, Egress-Guard
 │       ├── guard.py          # Egress-/SSRF-Guard (HTTPS + Allow-List + IP-Blocklist)
+│       ├── ical.py           # RFC-5545-iCalendar-(.ics)-Writer
 │       ├── settings.py       # Pydantic-Settings-Konfig (Loopback-Default)
 │       ├── logging_setup.py  # Strukturiertes Logging auf stderr
 │       ├── constants.py      # Kantonscodes, Schulart-Suffixe, API-Basen, Allow-List
@@ -274,7 +288,7 @@ swiss-holidays-mcp/
 ## Lifecycle-Phase
 
 Dieser Server ist in **Phase 1 (nur lesend)** — alle Tools nur lesend, keine
-Authentifizierung, keine Seiteneffekte. Das 10-Tool-Budget (vom empfohlenen Maximum
+Authentifizierung, keine Seiteneffekte. Das 12-Tool-Budget (vom empfohlenen Maximum
 von 15–20) lässt bewusst Spielraum für eine Phase-2-Erweiterung: Stadtzürcher
 Besonderheiten wie Sechseläuten und Knabenschiessen, die upstream weder Feiertag
 noch Schulferien sind und via [`zurich-opendata-mcp`](https://github.com/malkreide/zurich-opendata-mcp) kämen.
@@ -283,12 +297,12 @@ noch Schulferien sind und via [`zurich-opendata-mcp`](https://github.com/malkrei
 
 ## MCP-Primitive & Protokoll-Version
 
-- **Primitive — bewusst nur Tools.** Ein Phase-1-Read-only-Wrapper, dessen
-  gesamte Oberfläche idempotente, seiteneffektfreie `GET`s sind. **Resources**
-  wurden geprüft und zurückgestellt: ein stabiles URI-Schema
-  (`holidays://<kanton>/<jahr>`) ist ein Phase-2-Thema, sobald die kommunale
-  Ebene dazukommt. Es gibt keine wiederkehrenden Template-Workflows, daher keine
-  **Prompts**. Die Wahl wird in Phase 2 neu bewertet.
+- **Primitive — Tools + Resources.** Die 12 Tools sind idempotente,
+  seiteneffektfreie `GET`s. Eine **Resource** exponiert einen stabilen URI-Feed
+  (`holidays://<kanton>/<jahr>`), damit Clients den Kalender eines Kantons als
+  cachebaren Kontext lesen können, ohne einen Tool-Aufruf. Es gibt keine
+  wiederkehrenden Template-Workflows, daher keine **Prompts** (wird neu bewertet,
+  falls sich das ändert).
 - **MCP-Protokoll-Version.** Gebaut und getestet gegen Protokoll-Version
   `2025-06-18` (gepinnt als `MCP_PROTOCOL_VERSION`, ausgewiesen von
   `source_status`). Die Wire-Version wird vom gepinnten `mcp`-SDK
