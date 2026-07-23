@@ -36,6 +36,11 @@ security model against the audit catalogue.
 
 See [`network-egress.md`](network-egress.md). Two-host frozen allow-list,
 HTTPS-only, IP blocklist incl. cloud-metadata, `follow_redirects=False`.
+Egress is enforced in two layers (SEC-021): the in-process guard plus a
+network-layer policy for hardened deployments
+([`deploy/cilium-egress-fqdn.yaml`](../deploy/cilium-egress-fqdn.yaml),
+[`deploy/networkpolicy.yaml`](../deploy/networkpolicy.yaml)), which also closes
+the DNS-rebinding TOCTOU residual (SEC-005).
 
 ## Lethal-trifecta assessment (audit SEC-019)
 

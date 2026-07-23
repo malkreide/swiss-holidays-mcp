@@ -278,6 +278,7 @@ swiss-holidays-mcp/
 │   ├── test_resilience.py    # Degradation / retry / cache behaviour
 │   └── test_live.py          # Live smoke tests (marker: live)
 ├── docs/                     # roadmap.md, security.md, network-egress.md
+├── deploy/                   # Network-layer egress manifests (Cilium / NetworkPolicy)
 ├── audits/                   # mcp-audit run artifacts
 ├── Dockerfile                # Non-root multi-stage container
 ├── .github/

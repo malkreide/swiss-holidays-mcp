@@ -3,6 +3,17 @@
 Audit references: SEC-004 (SSRF), SEC-005 (DNS rebinding), SEC-021 (egress
 allow-list).
 
+Egress is controlled in **two layers** (SEC-021), so a gap in one is caught by
+the other:
+
+| Layer | Where | Artifact |
+|---|---|---|
+| **Code** | in-process, before every socket opens | `ALLOWED_HOSTS` frozenset + `guard.py` |
+| **Network** | pod / host, independent of the app | [`deploy/cilium-egress-fqdn.yaml`](../deploy/cilium-egress-fqdn.yaml), [`deploy/networkpolicy.yaml`](../deploy/networkpolicy.yaml) |
+
+The code layer is always active. The network layer is deployed for any
+networked (non-stdio) hardened deployment.
+
 ## Code-layer allow-list
 
 The server only ever talks to two fixed, public HTTPS hosts. They are pinned in
@@ -29,9 +40,17 @@ language are the only parameters and they are validated (SEC-018).
 
 ## Extending the allow-list
 
-Adding a host is a **code change + review**: edit `ALLOWED_HOSTS` in
-`constants.py`, add the host to the table above, and note it in the CHANGELOG.
-It is deliberately not configurable at runtime.
+Adding a host is a **code change + review** and must be applied to **both
+layers**:
+
+1. Edit `ALLOWED_HOSTS` in `constants.py` and add the host to the table above.
+2. Add the host to the `toFQDNs` list in `deploy/cilium-egress-fqdn.yaml` (and
+   to your egress gateway / security-group rules if you use the stock
+   `networkpolicy.yaml`).
+3. Note it in the CHANGELOG.
+
+It is deliberately not configurable at runtime — a missed network-layer update
+would otherwise silently break the new host while the code layer allows it.
 
 ## Inbound (HTTP transport)
 
