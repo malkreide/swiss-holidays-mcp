@@ -247,6 +247,11 @@ The HTTP transports attach an explicit CORS layer that exposes the
 `Mcp-Session-Id` header, so a browser MCP client can read the session id and
 make follow-up requests. The allow-list is never a wildcard.
 
+Running **more than one HTTP instance** behind a load balancer requires sticky
+sessions keyed on `Mcp-Session-Id` — see [`docs/scaling.md`](docs/scaling.md)
+for nginx/Traefik/Kubernetes examples. A single instance (the common case) needs
+no affinity configuration.
+
 > 💡 *"stdio for the developer laptop, SSE for the browser."*
 
 ---

@@ -247,6 +247,11 @@ Die HTTP-Transporte hängen eine explizite CORS-Schicht an, die den Header
 `Mcp-Session-Id` freigibt, damit ein Browser-MCP-Client die Session-ID lesen
 und Folge-Requests stellen kann. Die Allow-List ist nie eine Wildcard.
 
+Der Betrieb von **mehr als einer HTTP-Instanz** hinter einem Load Balancer
+erfordert Sticky Sessions anhand von `Mcp-Session-Id` — siehe
+[`docs/scaling.md`](docs/scaling.md) für nginx/Traefik/Kubernetes-Beispiele.
+Eine einzelne Instanz (der Normalfall) braucht keine Affinitäts-Konfiguration.
+
 > 💡 *«stdio für den Entwickler-Laptop, SSE für den Browser.»*
 
 ---
