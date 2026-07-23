@@ -39,12 +39,26 @@ When run with an HTTP transport, the MCP SDK's DNS-rebinding protection is
 enabled with an explicit Host/Origin allow-list (see `__main__._http_security`),
 so browsers on other origins cannot drive the server via a rebinding attack.
 
-## Residual risk (accepted)
+## DNS rebinding / TOCTOU residual (audit SEC-005)
 
-Full outbound DNS **pinning** (reusing the guard's resolved IP for the actual
-TCP connection, TOCTOU-free) is not implemented: httpx re-resolves at connect
-time. Given the two-host frozen allow-list, TLS certificate validation against
-the original hostname, and the IP blocklist above, the residual rebinding
-window is accepted. A network-layer egress policy (NetworkPolicy / security
-group restricting egress to these two hosts) is the recommended
-defense-in-depth for a hardened deployment.
+Full outbound DNS **pinning** in the client (reusing the guard's resolved IP for
+the actual TCP connection, TOCTOU-free) is **not** implemented in code: httpx
+re-resolves at connect time, and forcing an IP with an overridden TLS SNI is
+fragile and breaks when the process runs behind an HTTP proxy (the proxy, not
+the client, resolves the host). The in-process guard therefore reduces — but
+does not eliminate — the window between resolution and connection.
+
+The robust closure is at the **network layer**, and it is now shipped:
+
+- [`deploy/cilium-egress-fqdn.yaml`](../deploy/cilium-egress-fqdn.yaml) —
+  Cilium `toFQDNs` policy. The DNS proxy that enforces it is the authority on
+  which IPs the pod may reach, independent of what the app resolves, so a
+  rebinding answer to a poisoned resolver cannot be connected to.
+- [`deploy/networkpolicy.yaml`](../deploy/networkpolicy.yaml) — stock
+  Kubernetes fallback (DNS + 443 only; pair with an egress gateway for host
+  pinning).
+- Outside Kubernetes: a security-group / Cloudflare-WARP egress rule limiting
+  outbound to these two hosts on 443 achieves the same.
+
+For the documented **local stdio** use-case (no inbound surface, single trusted
+process), the residual is accepted as before.
