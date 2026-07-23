@@ -78,6 +78,7 @@ async def test_local_holidays_resolves_name(client):
     assert [p.name for p in local] == ["Sechseläuten"]
     assert local[0].half_day is True
     assert "CH-ZH-ZH-ZH" in resp.note and "Sechseläuten" in resp.note
+    assert resp.match_type == "exact"
 
 
 @respx.mock
@@ -92,6 +93,20 @@ async def test_local_holidays_accepts_full_code(client):
     # the request carried the resolved municipality code
     assert route.calls.last.request.url.params["subdivisionCode"] == "CH-ZH-ZH-ZH"
     assert resp.count == 2
+    assert resp.match_type == "exact"
+
+
+@respx.mock
+async def test_local_holidays_prefix_match_is_fuzzy(client):
+    """ARCH-003: a single prefix hit resolves with match_type 'fuzzy' + a caveat."""
+    _mock_subdivisions()
+    respx.get(f"{OPENHOLIDAYS_BASE}/PublicHolidays").mock(
+        return_value=httpx.Response(200, json=_ZH_CITY)
+    )
+    resp = await op_get_local_holidays(client, "CH-ZH", "Kilch", 2026)
+
+    assert resp.match_type == "fuzzy"
+    assert "prefix match" in resp.note
 
 
 @respx.mock
@@ -101,4 +116,5 @@ async def test_local_holidays_unknown_municipality(client):
 
     assert resp.count == 0
     assert resp.provenance == "degraded"
+    assert resp.match_type == "none"
     assert "No district or municipality matching" in resp.note

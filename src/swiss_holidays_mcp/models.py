@@ -12,6 +12,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 Provenance = Literal["live_api", "cached", "degraded"]
+MatchType = Literal["exact", "fuzzy", "none"]
 
 
 class Envelope(BaseModel):
@@ -95,6 +96,12 @@ class SchoolTypeListResponse(Envelope):
 
 
 class HolidayListResponse(Envelope):
+    match_type: MatchType = Field(
+        default="exact",
+        description="How the lookup key resolved (audit ARCH-003): 'exact' (code "
+        "or full name / validated canton), 'fuzzy' (a single prefix match was "
+        "assumed) or 'none' (nothing matched — see `note` for suggestions).",
+    )
     count: int
     holidays: list[HolidayPeriod]
 

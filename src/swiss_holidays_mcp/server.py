@@ -384,28 +384,30 @@ def _flatten_localities(tree: list[dict[str, Any]], canton_code: str, lang: str)
 
 def _resolve_locality(
     tree: list[dict[str, Any]], canton_code: str, query: str, lang: str
-) -> tuple[str | None, str, list[str]]:
+) -> tuple[str | None, str, str, list[str]]:
     """Resolve a district/municipality name *or* code within a canton to its code.
 
-    Returns ``(code, display_name, candidates)``. ``code`` is ``None`` on no match,
-    in which case ``candidates`` holds a few near suggestions for the error note.
+    Returns ``(code, display_name, match_type, candidates)`` (audit ARCH-003).
+    ``match_type`` is ``exact`` (code or full-name hit), ``fuzzy`` (a single
+    prefix match was assumed) or ``none`` — in which case ``code`` is ``None``
+    and ``candidates`` holds a few near suggestions for the error note.
     """
     areas = _flatten_localities(tree, canton_code, lang)
     q = query.strip()
     qu = q.upper()
     for code, name, _level in areas:  # exact code, e.g. "CH-ZH-ZH-ZH"
         if code.upper() == qu:
-            return code, name, []
+            return code, name, "exact", []
     ql = q.lower()
     exact = [a for a in areas if a[1].lower() == ql]
     if exact:  # a municipality wins over a same-named district
         exact.sort(key=lambda a: 0 if a[2] == "municipal" else 1)
-        return exact[0][0], exact[0][1], []
+        return exact[0][0], exact[0][1], "exact", []
     prefix = [a for a in areas if a[1].lower().startswith(ql)]
     if len(prefix) == 1:
-        return prefix[0][0], prefix[0][1], []
+        return prefix[0][0], prefix[0][1], "fuzzy", []
     candidates = sorted({a[1] for a in areas if ql in a[1].lower()})[:8]
-    return None, "", candidates
+    return None, "", "none", candidates
 
 
 async def op_get_local_holidays(
@@ -422,13 +424,16 @@ async def op_get_local_holidays(
     except UpstreamError:
         return HolidayListResponse(**_degraded("subdivisions", _OH), count=0, holidays=[])
 
-    code, display, candidates = _resolve_locality(tree, canton_code, municipality, lang)
+    code, display, match_type, candidates = _resolve_locality(
+        tree, canton_code, municipality, lang
+    )
     if code is None:
         hint = f" Did you mean: {', '.join(candidates)}?" if candidates else ""
         return HolidayListResponse(
             source=_OH,
             provenance="degraded",
             retrieved_at=utc_now_iso(),
+            match_type="none",
             note=f"No district or municipality matching {municipality!r} in {canton_code}.{hint}",
             count=0,
             holidays=[],
@@ -452,14 +457,18 @@ async def op_get_local_holidays(
             f"{display} has no locality-specific public holidays this year — all listed "
             "holidays are inherited from the canton or the confederation."
         )
+    resolved = f"Resolved {municipality!r} → {code} ({display})"
+    if match_type == "fuzzy":
+        resolved += " by prefix match — confirm this is the intended locality"
     note = (
-        f"Resolved {municipality!r} → {code} ({display}). {local_note} Holidays with "
+        f"{resolved}. {local_note} Holidays with "
         "scope 'regional' or 'national' are inherited, not locality-specific."
     )
     return HolidayListResponse(
         source=_OH,
         provenance=provenance,
         retrieved_at=stamp,
+        match_type=match_type,  # type: ignore[arg-type]
         note=note,
         count=len(periods),
         holidays=periods,
