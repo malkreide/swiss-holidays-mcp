@@ -770,6 +770,9 @@ def _bundle_markdown(canton: str, year: int, periods: list[HolidayPeriod], sourc
 async def list_cantons(ctx: Context, language: Language = "DE") -> CantonListResponse:
     """List the 26 Swiss cantons with their ISO subdivision codes.
 
+    <use_case>Resolve a canton name to the CH-XX code every other tool needs; call this first when
+    the user gives a canton by name.</use_case>
+
     Use this first to resolve a canton name to the `CH-XX` code that every other
     tool expects.
     """
@@ -782,6 +785,9 @@ async def list_school_types(
     ctx: Context, canton: CantonCode | None = None, language: Language = "DE"
 ) -> SchoolTypeListResponse:
     """List the Schularten (school types) that publish separate holiday tables.
+
+    <use_case>Discover whether a canton differentiates school holidays by Schulart before querying,
+    so VS/MS/BS/EO filters are used only where they exist.</use_case>
 
     Only a minority of cantons differentiate. For Zurich the codes are
     `CH-ZH-VS` (Volksschulen), `CH-ZH-MS` (Mittelschulen) and `CH-ZH-BS`
@@ -802,6 +808,11 @@ async def get_school_holidays(
     language: Language = "DE",
 ) -> HolidayListResponse:
     """Return school holiday periods for one canton in a date range.
+
+    <use_case>Look up a canton's school holidays for planning within an explicit from/to window
+    (term breaks, parent events, campaigns).</use_case>
+    <important_notes>Apparent duplicates are the same period per Schulart; set school_type to
+    collapse them. Cantons that do not differentiate return one table.</important_notes>
 
     Args:
         canton: ISO subdivision code, e.g. `CH-ZH`.
@@ -826,6 +837,9 @@ async def get_public_holidays(
 ) -> HolidayListResponse:
     """Return public holidays for one canton and calendar year.
 
+    <use_case>Get a canton's official public holidays for a whole year — cantonal holidays
+    (Berchtoldstag, Fronleichnam) differ, so always pass the canton.</use_case>
+
     Cantonal holidays such as Berchtoldstag differ substantially across
     Switzerland, so always pass the canton rather than assuming the federal set.
     """
@@ -842,6 +856,11 @@ async def get_local_holidays(
     language: Language = "DE",
 ) -> HolidayListResponse:
     """Public holidays for a single municipality or district, incl. local specifics.
+
+    <use_case>Answer the locality question the canton-level tools flatten away: which holidays are
+    observed only in this town (e.g. Zurich's Sechselaeuten)?</use_case>
+    <important_notes>scope is 'local' (specific here), 'regional' (canton/district) or 'national'
+    (inherited). Accepts a name or a full subdivision code.</important_notes>
 
     Answers the local question the canton-level tools flatten away: which holidays
     are observed *only* here? The city of Zurich, for example, keeps Sechseläuten
@@ -866,6 +885,9 @@ async def check_date(
 ) -> DateCheckResponse:
     """Check whether a given date falls into school holidays or a public holiday.
 
+    <use_case>The everyday scheduling question: can we hold the parents' evening on that Thursday?
+    Checks one date against both school and public holidays.</use_case>
+
     The everyday question behind this tool: "Can we schedule the parents'
     evening on that Thursday?"
     """
@@ -882,6 +904,9 @@ async def compare_school_holidays(
     language: Language = "DE",
 ) -> OverlapResponse:
     """Compare school holiday overlap between cantons for a calendar year.
+
+    <use_case>Quantify inter-cantonal school-holiday overlap (pairwise day counts) for coordinating
+    events or campaigns across cantonal borders.</use_case>
 
     Returns a pairwise matrix of overlapping holiday days. Defaults to `VS`
     (Volksschule) because that is the level most inter-cantonal coordination
@@ -902,6 +927,9 @@ async def find_common_free_window(
 ) -> WindowResponse:
     """Find date ranges in which all listed cantons are simultaneously on holiday.
 
+    <use_case>Find a common free window across several cantons — joint events, maintenance or
+    campaigns when every listed canton is on holiday.</use_case>
+
     Useful for planning campaigns, joint events or maintenance windows across
     cantonal borders.
     """
@@ -919,7 +947,11 @@ async def next_school_holidays(
     school_type: SchoolTypeCode = "VS",
     language: Language = "DE",
 ) -> HolidayListResponse:
-    """Return the next upcoming school holiday periods for a canton."""
+    """Return the next upcoming school holiday periods for a canton.
+
+    <use_case>Forward-looking planning: the next N school-holiday periods for a canton from today,
+    without computing a date range by hand.</use_case>
+    """
     return await op_next_school_holidays(_client(ctx), canton, count, school_type, language)
 
 
@@ -927,6 +959,11 @@ async def next_school_holidays(
 @_safe_tool
 async def get_long_weekends(ctx: Context, year: Year) -> LongWeekendResponse:
     """Return Swiss long weekends and the bridge days needed to create them.
+
+    <use_case>Plan bridge days: which long weekends exist this year and which working days must be
+    taken off to extend them.</use_case>
+    <important_notes>Computed from federal public holidays (Nager.Date); cantonal-only holidays are
+    not considered.</important_notes>
 
     Sourced from Nager.Date, which computes these from federal public holidays;
     cantonal-only holidays are not considered.
@@ -938,6 +975,9 @@ async def get_long_weekends(ctx: Context, year: Year) -> LongWeekendResponse:
 @_safe_tool
 async def source_status(ctx: Context) -> StatusResponse:
     """Report reachability and latency of both upstream sources.
+
+    <use_case>Health check before a batch of queries, or to distinguish 'no data' from 'source
+    down' — always returns an evaluable status.</use_case>
 
     Always returns an evaluable status rather than an empty result set, so that
     "no data" can be distinguished from "source down".
@@ -956,6 +996,9 @@ async def export_holidays_ics(
     language: Language = "DE",
 ) -> IcsResponse:
     """Export a canton's holidays for a year as an iCalendar (.ics) document.
+
+    <use_case>Produce a ready-to-import .ics calendar of a canton's holidays for a year, filtered
+    by public/school and Schulart.</use_case>
 
     Returns a ready-to-save `text/calendar` document with one all-day event per
     holiday. `include` selects `all` (default), `public` or `school`; combine
@@ -998,6 +1041,9 @@ async def is_holiday_today(
     ctx: Context, canton: CantonCode, school_type: SchoolTypeCode = None, language: Language = "DE"
 ) -> DateCheckResponse:
     """Is today a school or public holiday in the given canton?
+
+    <use_case>One-call convenience for the everyday 'are we off today?' question in a given
+    canton.</use_case>
 
     Convenience wrapper over `check_date` for the everyday question
     "are we off today?".

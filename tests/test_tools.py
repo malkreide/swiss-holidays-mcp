@@ -141,3 +141,13 @@ async def test_safe_tool_passes_validation_errors_through():
     with pytest.raises(ValueError) as excinfo:
         await validate()
     assert "Unknown canton" in str(excinfo.value)
+
+
+async def test_all_tools_carry_use_case_tag():
+    """ARCH-002: every tool description exposes a structured <use_case> tag."""
+    from swiss_holidays_mcp.server import mcp
+
+    tools = await mcp.list_tools()
+    assert len(tools) == 13
+    missing = [t.name for t in tools if "<use_case>" not in (t.description or "")]
+    assert not missing, f"tools without <use_case>: {missing}"
