@@ -40,7 +40,7 @@ HTTPS-only, IP blocklist incl. cloud-metadata, `follow_redirects=False`.
 ## Lethal-trifecta assessment (audit SEC-019)
 
 The server has the "access to private data" leg only in the weakest sense
-(public data), and **neither** the "act/exfiltrate" leg (all 10 tools are
+(public data), and **neither** the "act/exfiltrate" leg (all 13 tools are
 read-only, no write/send capability) **nor** untrusted-instruction ingestion
 that could be acted upon. The trifecta is not present.
 

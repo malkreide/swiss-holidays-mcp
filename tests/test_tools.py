@@ -108,3 +108,36 @@ def test_egress_guard_rejects_off_allowlist_host():
         assert_host_allowed("https://evil.example.com/x")
     with pytest.raises(EgressError):
         assert_host_allowed("http://openholidaysapi.org/x")  # non-HTTPS
+
+
+async def test_safe_tool_masks_unexpected_error():
+    """OBS-002: an unexpected exception never leaks its detail to the model.
+
+    This SDK version has no ``mask_error_details`` flag; ``_safe_tool`` is the
+    replacement. The internal message must be replaced by a generic one.
+    """
+    from swiss_holidays_mcp.server import _safe_tool
+
+    @_safe_tool
+    async def boom():
+        raise KeyError("internal-secret-detail-XYZ")
+
+    with pytest.raises(RuntimeError) as excinfo:
+        await boom()
+    message = str(excinfo.value)
+    assert "internal-secret-detail-XYZ" not in message
+    assert "KeyError" not in message
+    assert "unexpected internal error" in message
+
+
+async def test_safe_tool_passes_validation_errors_through():
+    """OBS-002: deliberate, user-safe ValueErrors stay intact (not masked)."""
+    from swiss_holidays_mcp.server import _safe_tool
+
+    @_safe_tool
+    async def validate():
+        raise ValueError("Unknown canton 'CH-XX'. Call list_cantons for valid codes.")
+
+    with pytest.raises(ValueError) as excinfo:
+        await validate()
+    assert "Unknown canton" in str(excinfo.value)

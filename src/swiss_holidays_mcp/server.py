@@ -19,6 +19,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date, timedelta
+from functools import wraps
 from itertools import combinations
 from typing import Annotated, Any
 
@@ -108,6 +109,36 @@ Year = Annotated[int, Field(ge=MIN_YEAR, le=MAX_YEAR)]
 SchoolTypeCode = Annotated[str | None, Field(pattern=r"^(?i:VS|MS|BS|EO)$")]
 Language = Annotated[str, Field(pattern=r"^(?i:DE|FR|IT|EN)$")]
 Include = Annotated[str, Field(pattern=r"^(?i:all|public|school)$")]
+
+
+def _safe_tool(fn):
+    """Mask unexpected internal errors before they reach the model (audit OBS-002).
+
+    This SDK version has no ``mask_error_details`` flag: FastMCP surfaces any
+    exception raised inside a tool to the client as the text of an ``isError``
+    result. Deliberate ``ValueError`` messages (input validation, e.g. an
+    unknown canton) are user-safe and pass through unchanged; every other
+    exception is logged to stderr only (OBS-002) and replaced with a generic
+    message, so tracebacks and internal detail never reach the LLM.
+    """
+
+    @wraps(fn)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return await fn(*args, **kwargs)
+        except ValueError:
+            raise
+        except Exception as exc:
+            _log.error(
+                "tool_unexpected_error",
+                extra={"context": {"tool": fn.__name__, "error": type(exc).__name__}},
+            )
+            raise RuntimeError(
+                "The server hit an unexpected internal error. Please retry in a "
+                "moment; if it persists, the upstream data format may have changed."
+            ) from None
+
+    return wrapper
 
 
 # --------------------------------------------------------------- helpers
@@ -735,6 +766,7 @@ def _bundle_markdown(canton: str, year: int, periods: list[HolidayPeriod], sourc
 
 
 @mcp.tool(annotations=_RO)
+@_safe_tool
 async def list_cantons(ctx: Context, language: Language = "DE") -> CantonListResponse:
     """List the 26 Swiss cantons with their ISO subdivision codes.
 
@@ -745,6 +777,7 @@ async def list_cantons(ctx: Context, language: Language = "DE") -> CantonListRes
 
 
 @mcp.tool(annotations=_RO)
+@_safe_tool
 async def list_school_types(
     ctx: Context, canton: CantonCode | None = None, language: Language = "DE"
 ) -> SchoolTypeListResponse:
@@ -759,6 +792,7 @@ async def list_school_types(
 
 
 @mcp.tool(annotations=_RO)
+@_safe_tool
 async def get_school_holidays(
     ctx: Context,
     canton: CantonCode,
@@ -786,6 +820,7 @@ async def get_school_holidays(
 
 
 @mcp.tool(annotations=_RO)
+@_safe_tool
 async def get_public_holidays(
     ctx: Context, canton: CantonCode, year: Year, language: Language = "DE"
 ) -> HolidayListResponse:
@@ -798,6 +833,7 @@ async def get_public_holidays(
 
 
 @mcp.tool(annotations=_RO)
+@_safe_tool
 async def get_local_holidays(
     ctx: Context,
     canton: CantonCode,
@@ -820,6 +856,7 @@ async def get_local_holidays(
 
 
 @mcp.tool(annotations=_RO)
+@_safe_tool
 async def check_date(
     ctx: Context,
     check_date_iso: IsoDate,
@@ -836,6 +873,7 @@ async def check_date(
 
 
 @mcp.tool(annotations=_RO)
+@_safe_tool
 async def compare_school_holidays(
     ctx: Context,
     cantons: list[CantonCode],
@@ -853,6 +891,7 @@ async def compare_school_holidays(
 
 
 @mcp.tool(annotations=_RO)
+@_safe_tool
 async def find_common_free_window(
     ctx: Context,
     cantons: list[CantonCode],
@@ -872,6 +911,7 @@ async def find_common_free_window(
 
 
 @mcp.tool(annotations=_RO)
+@_safe_tool
 async def next_school_holidays(
     ctx: Context,
     canton: CantonCode,
@@ -884,6 +924,7 @@ async def next_school_holidays(
 
 
 @mcp.tool(annotations=_RO)
+@_safe_tool
 async def get_long_weekends(ctx: Context, year: Year) -> LongWeekendResponse:
     """Return Swiss long weekends and the bridge days needed to create them.
 
@@ -894,6 +935,7 @@ async def get_long_weekends(ctx: Context, year: Year) -> LongWeekendResponse:
 
 
 @mcp.tool(annotations=_RO)
+@_safe_tool
 async def source_status(ctx: Context) -> StatusResponse:
     """Report reachability and latency of both upstream sources.
 
@@ -904,6 +946,7 @@ async def source_status(ctx: Context) -> StatusResponse:
 
 
 @mcp.tool(annotations=_RO)
+@_safe_tool
 async def export_holidays_ics(
     ctx: Context,
     canton: CantonCode,
@@ -950,6 +993,7 @@ async def export_holidays_ics(
 
 
 @mcp.tool(annotations=_RO)
+@_safe_tool
 async def is_holiday_today(
     ctx: Context, canton: CantonCode, school_type: SchoolTypeCode = None, language: Language = "DE"
 ) -> DateCheckResponse:

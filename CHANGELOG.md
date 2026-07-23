@@ -3,6 +3,28 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+Audit remediations from the `mcp-audit` run
+(`audits/2026-07-23T140326-Z-swiss-holidays-mcp/`).
+
+### Security
+
+- **OBS-002 — mask unexpected error details.** This `mcp` SDK version (1.28.1)
+  has no `mask_error_details` flag; FastMCP surfaces any exception raised in a
+  tool to the client as `isError` text. A new `_safe_tool` decorator wraps all
+  13 tools: deliberate, user-safe `ValueError` messages (input validation) pass
+  through unchanged, while every other exception is logged to stderr only and
+  replaced with a generic message — so tracebacks and internal detail (e.g. an
+  upstream-schema `KeyError`) never reach the LLM. Covered by two regression
+  tests.
+
+### Fixed
+
+- **Documentation drift (audit ARCH-011).** `docs/security.md` and
+  `docs/roadmap.md` still referred to "10 tools" and roadmap status "v0.2.0";
+  corrected to 13 tools / v0.5.0 to match the implementation.
+
 ## [0.5.0] — 2026-07-22
 
 Local / municipal holidays. A live probe of OpenHolidays revealed that
