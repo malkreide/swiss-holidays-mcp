@@ -151,3 +151,22 @@ async def test_all_tools_carry_use_case_tag():
     assert len(tools) == 13
     missing = [t.name for t in tools if "<use_case>" not in (t.description or "")]
     assert not missing, f"tools without <use_case>: {missing}"
+
+
+@respx.mock
+async def test_check_date_reports_progress(client, zh_school_payload):
+    """SDK-003: op_check_date emits progress updates when a ctx is supplied."""
+    respx.get(f"{OPENHOLIDAYS_BASE}/SchoolHolidays").mock(
+        return_value=httpx.Response(200, json=zh_school_payload)
+    )
+    respx.get(f"{OPENHOLIDAYS_BASE}/PublicHolidays").mock(return_value=httpx.Response(200, json=[]))
+
+    updates = []
+
+    class _Ctx:
+        async def report_progress(self, done, total=None, message=None):
+            updates.append((done, total, message))
+
+    await op_check_date(client, "2026-04-27", "CH-ZH", school_type="VS", ctx=_Ctx())
+    assert updates, "expected at least one progress update"
+    assert updates[0][0] == 0 and updates[-1][0] == 1  # started at 0, finished at 1

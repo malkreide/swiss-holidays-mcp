@@ -153,6 +153,17 @@ def _client(ctx: Context) -> HolidayClient:
     return ctx.request_context.lifespan_context.client
 
 
+async def _report(ctx: Context | None, done: float, total: float, message: str) -> None:
+    """Best-effort progress notification for longer tools (audit SDK-003).
+
+    A no-op without a ``ctx`` (unit tests call the ``op_*`` layer directly) or
+    when the client did not supply a progress token (``report_progress`` returns
+    early in that case).
+    """
+    if ctx is not None:
+        await ctx.report_progress(done, total, message)
+
+
 def _canton_of(code: str) -> str:
     """CH-BE-TH-BL -> CH-BE. Sub-cantonal codes are common in holiday records."""
     parts = code.split("-")
@@ -429,9 +440,7 @@ async def op_get_local_holidays(
     except UpstreamError:
         return HolidayListResponse(**_degraded("subdivisions", _OH), count=0, holidays=[])
 
-    code, display, match_type, candidates = _resolve_locality(
-        tree, canton_code, municipality, lang
-    )
+    code, display, match_type, candidates = _resolve_locality(tree, canton_code, municipality, lang)
     if code is None:
         hint = f" Did you mean: {', '.join(candidates)}?" if candidates else ""
         return HolidayListResponse(
@@ -486,6 +495,7 @@ async def op_check_date(
     canton: str,
     school_type: str | None = None,
     language: str = "DE",
+    ctx: Context | None = None,
 ) -> DateCheckResponse:
     lang = normalise_language(language)
     canton_code = _require_known_canton(canton)
@@ -493,6 +503,7 @@ async def op_check_date(
     window_from = (target - timedelta(days=40)).isoformat()
     window_to = (target + timedelta(days=40)).isoformat()
 
+    await _report(ctx, 0, 1, f"Fetching school + public holidays for {canton_code}…")
     try:
         # Aggregate the two upstream lookups concurrently (audit ARCH-007).
         (school_raw, provenance, stamp), (public_raw, _, _) = await asyncio.gather(
@@ -519,6 +530,7 @@ async def op_check_date(
         for p in (_to_period(e, lang, "Public") for e in public_raw)
         if p.start_date <= target <= p.end_date
     ]
+    await _report(ctx, 1, 1, "Done")
     return DateCheckResponse(
         source=_OH,
         provenance=provenance,
@@ -693,12 +705,13 @@ async def op_get_long_weekends(client: HolidayClient, year: int) -> LongWeekendR
     )
 
 
-async def op_source_status(client: HolidayClient) -> StatusResponse:
-    probes = [
-        await client.probe("OpenHolidays API", f"{OPENHOLIDAYS_BASE}/Countries"),
-        await client.probe("Nager.Date", f"{NAGER_BASE}/AvailableCountries"),
-    ]
-    sources = [SourceStatus(**p) for p in probes]
+async def op_source_status(client: HolidayClient, ctx: Context | None = None) -> StatusResponse:
+    await _report(ctx, 0, 2, "Probing OpenHolidays…")
+    open_probe = await client.probe("OpenHolidays API", f"{OPENHOLIDAYS_BASE}/Countries")
+    await _report(ctx, 1, 2, "Probing Nager.Date…")
+    nager_probe = await client.probe("Nager.Date", f"{NAGER_BASE}/AvailableCountries")
+    await _report(ctx, 2, 2, "Done")
+    sources = [SourceStatus(**p) for p in (open_probe, nager_probe)]
     return StatusResponse(
         source=f"{_OH} | {_NG}",
         provenance="live_api",
@@ -716,6 +729,7 @@ async def op_holidays_bundle(
     include: str = "all",
     school_type: str | None = None,
     language: str = "DE",
+    ctx: Context | None = None,
 ) -> tuple[str, list[HolidayPeriod], str, str]:
     """Fetch a canton's public and/or school holidays for a whole year.
 
@@ -734,7 +748,9 @@ async def op_holidays_bundle(
         calls.append(client.school_holidays(frm, to, lang, canton_code))
     if want_public:
         calls.append(client.public_holidays(frm, to, lang, canton_code))
+    await _report(ctx, 0, 1, f"Fetching {mode} holidays for {canton_code} {year}…")
     results = await asyncio.gather(*calls)
+    await _report(ctx, 1, 1, "Done")
 
     periods: list[HolidayPeriod] = []
     provenance, stamp = "live_api", utc_now_iso()
@@ -905,7 +921,7 @@ async def check_date(
     The everyday question behind this tool: "Can we schedule the parents'
     evening on that Thursday?"
     """
-    return await op_check_date(_client(ctx), check_date_iso, canton, school_type, language)
+    return await op_check_date(_client(ctx), check_date_iso, canton, school_type, language, ctx=ctx)
 
 
 @mcp.tool(annotations=_RO)
@@ -996,7 +1012,7 @@ async def source_status(ctx: Context) -> StatusResponse:
     Always returns an evaluable status rather than an empty result set, so that
     "no data" can be distinguished from "source down".
     """
-    return await op_source_status(_client(ctx))
+    return await op_source_status(_client(ctx), ctx=ctx)
 
 
 @mcp.tool(annotations=_RO)
@@ -1020,7 +1036,7 @@ async def export_holidays_ics(
     """
     try:
         canton_code, periods, provenance, stamp = await op_holidays_bundle(
-            _client(ctx), canton, year, include, school_type, language
+            _client(ctx), canton, year, include, school_type, language, ctx=ctx
         )
     except UpstreamError:
         return IcsResponse(
@@ -1063,7 +1079,7 @@ async def is_holiday_today(
     "are we off today?".
     """
     return await op_check_date(
-        _client(ctx), date.today().isoformat(), canton, school_type, language
+        _client(ctx), date.today().isoformat(), canton, school_type, language, ctx=ctx
     )
 
 
@@ -1080,7 +1096,9 @@ async def holidays_resource(canton: str, year: str, ctx: Context) -> str:
     if not MIN_YEAR <= parsed_year <= MAX_YEAR:
         return f"Year {parsed_year} is out of the supported range {MIN_YEAR}-{MAX_YEAR}."
     try:
-        canton_code, periods, _, _ = await op_holidays_bundle(_client(ctx), canton, parsed_year)
+        canton_code, periods, _, _ = await op_holidays_bundle(
+            _client(ctx), canton, parsed_year, ctx=ctx
+        )
     except ValueError as exc:
         return str(exc)
     except UpstreamError:
