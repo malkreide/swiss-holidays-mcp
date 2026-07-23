@@ -45,7 +45,7 @@ from .constants import (
     SCHOOL_TYPE_SUFFIX,
 )
 from .ical import build_ics
-from .logging_setup import get_logger
+from .logging_setup import bind_tool_context, get_logger, unbind_tool_context
 from .models import (
     Canton,
     CantonListResponse,
@@ -124,6 +124,9 @@ def _safe_tool(fn):
 
     @wraps(fn)
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        # Bind a correlation id + tool name so every log line for this call is
+        # attributable (audit OBS-003).
+        tokens = bind_tool_context(fn.__name__)
         try:
             return await fn(*args, **kwargs)
         except ValueError:
@@ -131,12 +134,14 @@ def _safe_tool(fn):
         except Exception as exc:
             _log.error(
                 "tool_unexpected_error",
-                extra={"context": {"tool": fn.__name__, "error": type(exc).__name__}},
+                extra={"context": {"error": type(exc).__name__}},
             )
             raise RuntimeError(
                 "The server hit an unexpected internal error. Please retry in a "
                 "moment; if it persists, the upstream data format may have changed."
             ) from None
+        finally:
+            unbind_tool_context(tokens)
 
     return wrapper
 
