@@ -241,6 +241,11 @@ FastMCP exponiert SSE unter `/sse`, nicht unter `/mcp`.
 | `MCP_TRANSPORT` | `stdio` | Transport: `stdio`, `sse`, `streamable-http` (bzw. `http`) |
 | `PORT` / `MCP_PORT` | `8000` | Port für HTTP-Transporte |
 | `MCP_HOST` | `127.0.0.1` | Bind-Adresse für HTTP-Transporte. Standardmässig Loopback; `0.0.0.0` ist Opt-in und erzeugt eine Warnung — hinter authentifizierendem Reverse Proxy betreiben. |
+| `MCP_CORS_ORIGINS` | *(leer)* | Kommaseparierte zusätzliche CORS-Origins für Browser-Clients (Audit SDK-004). Loopback-Origins sind immer erlaubt; ergänze die öffentliche Origin, unter der dein UI ausgeliefert wird, z.B. `https://ui.example.ch`. Niemals `*`. |
+
+Die HTTP-Transporte hängen eine explizite CORS-Schicht an, die den Header
+`Mcp-Session-Id` freigibt, damit ein Browser-MCP-Client die Session-ID lesen
+und Folge-Requests stellen kann. Die Allow-List ist nie eine Wildcard.
 
 > 💡 *«stdio für den Entwickler-Laptop, SSE für den Browser.»*
 
