@@ -1,0 +1,19 @@
+name: swiss-holidays-mcp
+repo: https://github.com/malkreide/swiss-holidays-mcp
+sdk_language: Python                 # FastMCP (mcp.server.fastmcp)
+transport: dual                      # stdio + SSE/streamable-http via MCP_TRANSPORT
+auth_model: none                     # both upstreams public, no API key
+data_class: Public Open Data         # aggregated holiday calendars, no PII
+write_capable: false                 # all 13 tools readOnlyHint: true
+deployment: [local-stdio]            # Dockerfile present but no cloud deploy config (no render.yaml/Procfile/railway.json)
+is_cloud_deployed: false             # derived: deployment == [local-stdio]
+uses_sampling: false
+uses_sequential_thinking: false
+tools_include_filesystem: false
+tools_make_external_requests: true   # OpenHolidays API + Nager.Date
+stadt_zuerich_context: false
+schulamt_context: true
+volksschule_context: true
+enterprise_context: false
+data_source:
+  is_swiss_open_data: true

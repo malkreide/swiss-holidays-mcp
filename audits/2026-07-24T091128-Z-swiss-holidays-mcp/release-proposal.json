@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "production_ready": true,
+  "current_version": "0.5.0",
+  "current_version_source": "pyproject",
+  "next_version": "0.6.0",
+  "bump": "minor",
+  "changelog_path": "/home/user/swiss-holidays-mcp/CHANGELOG.md",
+  "changelog_entry": "## [v0.6.0] — 2026-07-24\n\nCloses all 10 audit findings (SEC-005 DNS pinning, ARCH-011 rationale, + CORS/match_type/use_case/correlation-id/progress/network-egress). Final re-audit: 36 pass / 0 partial.\n\n### Audit verification\n\n- **Production-ready:** ✅ yes\n- **Audit run-id:** `2026-07-24T091128-Z-swiss-holidays-mcp`\n- **Skill version:** `1.0.0`\n- **Catalog hash:** `091f446b2796…`\n- **Check results:** 36 pass · 0 fail · 0 partial · 0 todo\n\n",
+  "tag_command": "git tag -a v0.6.0 -m \"Release v0.6.0\"",
+  "release_command": "gh release create v0.6.0 --title \"Release v0.6.0\" --notes-file <path> --draft",
+  "audit": {
+    "run_id": "2026-07-24T091128-Z-swiss-holidays-mcp",
+    "skill_version": "1.0.0",
+    "catalog_hash_short": "091f446b2796",
+    "by_status": {
+      "pass": 36,
+      "fail": 0,
+      "partial": 0,
+      "todo": 0,
+      "n/a": 1
+    },
+    "findings_count": 0
+  }
+}

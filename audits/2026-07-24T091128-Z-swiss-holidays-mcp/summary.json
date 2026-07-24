@@ -1,0 +1,104 @@
+{
+  "audit_meta": {
+    "server_name": "swiss-holidays-mcp",
+    "run_id": "2026-07-24T091128-Z-swiss-holidays-mcp",
+    "audit_date": "2026-07-24",
+    "skill_version": "1.0.0",
+    "catalog_version": "68-checks (v0.5.0 catalog)",
+    "catalog_hash": "091f446b27965044ce658a1d5f4b2cabe2b0ab5661dcc1a53b6be8f1f2e093c0",
+    "profile": {
+      "transport": "dual",
+      "auth_model": "none",
+      "data_class": "Public Open Data",
+      "write_capable": false,
+      "deployment": [
+        "local-stdio"
+      ],
+      "tools_make_external_requests": true
+    },
+    "findings_policy": "fail-or-partial",
+    "verification_method": "single-file code review (no Task-agent delegation; 4.5 gate n/a)",
+    "reaudit_of": "2026-07-24T073448-Z-swiss-holidays-mcp",
+    "note": "Final re-audit after merging PR #18 (SEC-005 client-side DNS pinning, ARCH-011 single-file rationale). Same catalog_hash; same profile."
+  },
+  "totals": {
+    "checks_evaluated": 37,
+    "applicable": 36,
+    "by_status": {
+      "pass": 36,
+      "fail": 0,
+      "partial": 0,
+      "todo": 0,
+      "n/a": 1
+    },
+    "by_severity_among_findings": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "by_category": {
+      "ARCH": {
+        "pass": 11,
+        "fail": 0,
+        "partial": 0,
+        "todo": 0,
+        "n/a": 0
+      },
+      "CH": {
+        "pass": 2,
+        "fail": 0,
+        "partial": 0,
+        "todo": 0,
+        "n/a": 0
+      },
+      "OBS": {
+        "pass": 4,
+        "fail": 0,
+        "partial": 0,
+        "todo": 0,
+        "n/a": 0
+      },
+      "OPS": {
+        "pass": 3,
+        "fail": 0,
+        "partial": 0,
+        "todo": 0,
+        "n/a": 0
+      },
+      "SCALE": {
+        "pass": 1,
+        "fail": 0,
+        "partial": 0,
+        "todo": 0,
+        "n/a": 0
+      },
+      "SDK": {
+        "pass": 4,
+        "fail": 0,
+        "partial": 0,
+        "todo": 0,
+        "n/a": 0
+      },
+      "SEC": {
+        "pass": 11,
+        "fail": 0,
+        "partial": 0,
+        "todo": 0,
+        "n/a": 1
+      }
+    }
+  },
+  "findings": {
+    "policy": "fail-or-partial",
+    "policy_statuses": [
+      "fail",
+      "partial"
+    ],
+    "expected_count": 0,
+    "expected_ids": [],
+    "details": []
+  },
+  "production_ready": true,
+  "blocking_findings": []
+}
