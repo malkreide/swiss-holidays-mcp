@@ -8,11 +8,23 @@ authenticating reverse proxy in that case.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from mcp.server.transport_security import TransportSecuritySettings
 
 from .logging_setup import get_logger, setup_logging
 from .server import mcp
 from .settings import Settings
+
+if TYPE_CHECKING:
+    from starlette.applications import Starlette
+
+# Headers a browser MCP client must be allowed to send / read on HTTP transports
+# (audit SDK-004). Mcp-Session-Id is the one that matters: without exposing it,
+# a cross-origin client cannot read the session id and cannot make follow-ups.
+_CORS_ALLOW_HEADERS = ["Content-Type", "Mcp-Session-Id", "Last-Event-ID", "MCP-Protocol-Version"]
+_CORS_EXPOSE_HEADERS = ["Mcp-Session-Id"]
+_CORS_ALLOW_METHODS = ["GET", "POST", "DELETE", "OPTIONS"]
 
 
 def _http_security(settings: Settings) -> TransportSecuritySettings:
@@ -26,12 +38,36 @@ def _http_security(settings: Settings) -> TransportSecuritySettings:
         f"127.0.0.1:{settings.port}",
         f"localhost:{settings.port}",
     }
-    origins = {f"http://127.0.0.1:{settings.port}", f"http://localhost:{settings.port}"}
     return TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=sorted(hosts),
-        allowed_origins=sorted(origins),
+        allowed_origins=settings.cors_origin_list,
     )
+
+
+def _build_http_app(settings: Settings) -> Starlette:
+    """Build the Starlette app for the selected HTTP transport, with CORS (SDK-004).
+
+    ``mcp.run(transport=...)`` builds the app internally and gives no hook to add
+    middleware, so the HTTP path constructs the app here, attaches an explicit
+    (never wildcard) CORS layer that exposes ``Mcp-Session-Id``, and is served by
+    ``main`` via uvicorn.
+    """
+    from starlette.middleware.cors import CORSMiddleware
+
+    mcp.settings.host = settings.host
+    mcp.settings.port = settings.port
+    mcp.settings.transport_security = _http_security(settings)
+
+    app = mcp.sse_app() if settings.transport.lower() == "sse" else mcp.streamable_http_app()
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origin_list,
+        allow_methods=_CORS_ALLOW_METHODS,
+        allow_headers=_CORS_ALLOW_HEADERS,
+        expose_headers=_CORS_EXPOSE_HEADERS,
+    )
+    return app
 
 
 def main() -> None:
@@ -49,12 +85,18 @@ def main() -> None:
                     }
                 },
             )
-        mcp.settings.host = settings.host
-        mcp.settings.port = settings.port
-        mcp.settings.transport_security = _http_security(settings)
         transport = "sse" if settings.transport.lower() == "sse" else "streamable-http"
+        app = _build_http_app(settings)
         log.info("starting", extra={"context": {"transport": transport, "host": settings.host}})
-        mcp.run(transport=transport)
+
+        import uvicorn
+
+        uvicorn.run(
+            app,
+            host=settings.host,
+            port=settings.port,
+            log_level=settings.log_level.lower(),
+        )
     else:
         get_logger().info("starting", extra={"context": {"transport": "stdio"}})
         mcp.run(transport="stdio")

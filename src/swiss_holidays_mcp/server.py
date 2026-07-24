@@ -45,7 +45,7 @@ from .constants import (
     SCHOOL_TYPE_SUFFIX,
 )
 from .ical import build_ics
-from .logging_setup import get_logger
+from .logging_setup import bind_tool_context, get_logger, unbind_tool_context
 from .models import (
     Canton,
     CantonListResponse,
@@ -124,6 +124,9 @@ def _safe_tool(fn):
 
     @wraps(fn)
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        # Bind a correlation id + tool name so every log line for this call is
+        # attributable (audit OBS-003).
+        tokens = bind_tool_context(fn.__name__)
         try:
             return await fn(*args, **kwargs)
         except ValueError:
@@ -131,12 +134,14 @@ def _safe_tool(fn):
         except Exception as exc:
             _log.error(
                 "tool_unexpected_error",
-                extra={"context": {"tool": fn.__name__, "error": type(exc).__name__}},
+                extra={"context": {"error": type(exc).__name__}},
             )
             raise RuntimeError(
                 "The server hit an unexpected internal error. Please retry in a "
                 "moment; if it persists, the upstream data format may have changed."
             ) from None
+        finally:
+            unbind_tool_context(tokens)
 
     return wrapper
 
@@ -146,6 +151,17 @@ def _safe_tool(fn):
 
 def _client(ctx: Context) -> HolidayClient:
     return ctx.request_context.lifespan_context.client
+
+
+async def _report(ctx: Context | None, done: float, total: float, message: str) -> None:
+    """Best-effort progress notification for longer tools (audit SDK-003).
+
+    A no-op without a ``ctx`` (unit tests call the ``op_*`` layer directly) or
+    when the client did not supply a progress token (``report_progress`` returns
+    early in that case).
+    """
+    if ctx is not None:
+        await ctx.report_progress(done, total, message)
 
 
 def _canton_of(code: str) -> str:
@@ -384,28 +400,30 @@ def _flatten_localities(tree: list[dict[str, Any]], canton_code: str, lang: str)
 
 def _resolve_locality(
     tree: list[dict[str, Any]], canton_code: str, query: str, lang: str
-) -> tuple[str | None, str, list[str]]:
+) -> tuple[str | None, str, str, list[str]]:
     """Resolve a district/municipality name *or* code within a canton to its code.
 
-    Returns ``(code, display_name, candidates)``. ``code`` is ``None`` on no match,
-    in which case ``candidates`` holds a few near suggestions for the error note.
+    Returns ``(code, display_name, match_type, candidates)`` (audit ARCH-003).
+    ``match_type`` is ``exact`` (code or full-name hit), ``fuzzy`` (a single
+    prefix match was assumed) or ``none`` — in which case ``code`` is ``None``
+    and ``candidates`` holds a few near suggestions for the error note.
     """
     areas = _flatten_localities(tree, canton_code, lang)
     q = query.strip()
     qu = q.upper()
     for code, name, _level in areas:  # exact code, e.g. "CH-ZH-ZH-ZH"
         if code.upper() == qu:
-            return code, name, []
+            return code, name, "exact", []
     ql = q.lower()
     exact = [a for a in areas if a[1].lower() == ql]
     if exact:  # a municipality wins over a same-named district
         exact.sort(key=lambda a: 0 if a[2] == "municipal" else 1)
-        return exact[0][0], exact[0][1], []
+        return exact[0][0], exact[0][1], "exact", []
     prefix = [a for a in areas if a[1].lower().startswith(ql)]
     if len(prefix) == 1:
-        return prefix[0][0], prefix[0][1], []
+        return prefix[0][0], prefix[0][1], "fuzzy", []
     candidates = sorted({a[1] for a in areas if ql in a[1].lower()})[:8]
-    return None, "", candidates
+    return None, "", "none", candidates
 
 
 async def op_get_local_holidays(
@@ -422,13 +440,14 @@ async def op_get_local_holidays(
     except UpstreamError:
         return HolidayListResponse(**_degraded("subdivisions", _OH), count=0, holidays=[])
 
-    code, display, candidates = _resolve_locality(tree, canton_code, municipality, lang)
+    code, display, match_type, candidates = _resolve_locality(tree, canton_code, municipality, lang)
     if code is None:
         hint = f" Did you mean: {', '.join(candidates)}?" if candidates else ""
         return HolidayListResponse(
             source=_OH,
             provenance="degraded",
             retrieved_at=utc_now_iso(),
+            match_type="none",
             note=f"No district or municipality matching {municipality!r} in {canton_code}.{hint}",
             count=0,
             holidays=[],
@@ -452,14 +471,18 @@ async def op_get_local_holidays(
             f"{display} has no locality-specific public holidays this year — all listed "
             "holidays are inherited from the canton or the confederation."
         )
+    resolved = f"Resolved {municipality!r} → {code} ({display})"
+    if match_type == "fuzzy":
+        resolved += " by prefix match — confirm this is the intended locality"
     note = (
-        f"Resolved {municipality!r} → {code} ({display}). {local_note} Holidays with "
+        f"{resolved}. {local_note} Holidays with "
         "scope 'regional' or 'national' are inherited, not locality-specific."
     )
     return HolidayListResponse(
         source=_OH,
         provenance=provenance,
         retrieved_at=stamp,
+        match_type=match_type,  # type: ignore[arg-type]
         note=note,
         count=len(periods),
         holidays=periods,
@@ -472,6 +495,7 @@ async def op_check_date(
     canton: str,
     school_type: str | None = None,
     language: str = "DE",
+    ctx: Context | None = None,
 ) -> DateCheckResponse:
     lang = normalise_language(language)
     canton_code = _require_known_canton(canton)
@@ -479,6 +503,7 @@ async def op_check_date(
     window_from = (target - timedelta(days=40)).isoformat()
     window_to = (target + timedelta(days=40)).isoformat()
 
+    await _report(ctx, 0, 1, f"Fetching school + public holidays for {canton_code}…")
     try:
         # Aggregate the two upstream lookups concurrently (audit ARCH-007).
         (school_raw, provenance, stamp), (public_raw, _, _) = await asyncio.gather(
@@ -505,6 +530,7 @@ async def op_check_date(
         for p in (_to_period(e, lang, "Public") for e in public_raw)
         if p.start_date <= target <= p.end_date
     ]
+    await _report(ctx, 1, 1, "Done")
     return DateCheckResponse(
         source=_OH,
         provenance=provenance,
@@ -679,12 +705,13 @@ async def op_get_long_weekends(client: HolidayClient, year: int) -> LongWeekendR
     )
 
 
-async def op_source_status(client: HolidayClient) -> StatusResponse:
-    probes = [
-        await client.probe("OpenHolidays API", f"{OPENHOLIDAYS_BASE}/Countries"),
-        await client.probe("Nager.Date", f"{NAGER_BASE}/AvailableCountries"),
-    ]
-    sources = [SourceStatus(**p) for p in probes]
+async def op_source_status(client: HolidayClient, ctx: Context | None = None) -> StatusResponse:
+    await _report(ctx, 0, 2, "Probing OpenHolidays…")
+    open_probe = await client.probe("OpenHolidays API", f"{OPENHOLIDAYS_BASE}/Countries")
+    await _report(ctx, 1, 2, "Probing Nager.Date…")
+    nager_probe = await client.probe("Nager.Date", f"{NAGER_BASE}/AvailableCountries")
+    await _report(ctx, 2, 2, "Done")
+    sources = [SourceStatus(**p) for p in (open_probe, nager_probe)]
     return StatusResponse(
         source=f"{_OH} | {_NG}",
         provenance="live_api",
@@ -702,6 +729,7 @@ async def op_holidays_bundle(
     include: str = "all",
     school_type: str | None = None,
     language: str = "DE",
+    ctx: Context | None = None,
 ) -> tuple[str, list[HolidayPeriod], str, str]:
     """Fetch a canton's public and/or school holidays for a whole year.
 
@@ -720,7 +748,9 @@ async def op_holidays_bundle(
         calls.append(client.school_holidays(frm, to, lang, canton_code))
     if want_public:
         calls.append(client.public_holidays(frm, to, lang, canton_code))
+    await _report(ctx, 0, 1, f"Fetching {mode} holidays for {canton_code} {year}…")
     results = await asyncio.gather(*calls)
+    await _report(ctx, 1, 1, "Done")
 
     periods: list[HolidayPeriod] = []
     provenance, stamp = "live_api", utc_now_iso()
@@ -770,6 +800,9 @@ def _bundle_markdown(canton: str, year: int, periods: list[HolidayPeriod], sourc
 async def list_cantons(ctx: Context, language: Language = "DE") -> CantonListResponse:
     """List the 26 Swiss cantons with their ISO subdivision codes.
 
+    <use_case>Resolve a canton name to the CH-XX code every other tool needs; call this first when
+    the user gives a canton by name.</use_case>
+
     Use this first to resolve a canton name to the `CH-XX` code that every other
     tool expects.
     """
@@ -782,6 +815,9 @@ async def list_school_types(
     ctx: Context, canton: CantonCode | None = None, language: Language = "DE"
 ) -> SchoolTypeListResponse:
     """List the Schularten (school types) that publish separate holiday tables.
+
+    <use_case>Discover whether a canton differentiates school holidays by Schulart before querying,
+    so VS/MS/BS/EO filters are used only where they exist.</use_case>
 
     Only a minority of cantons differentiate. For Zurich the codes are
     `CH-ZH-VS` (Volksschulen), `CH-ZH-MS` (Mittelschulen) and `CH-ZH-BS`
@@ -802,6 +838,11 @@ async def get_school_holidays(
     language: Language = "DE",
 ) -> HolidayListResponse:
     """Return school holiday periods for one canton in a date range.
+
+    <use_case>Look up a canton's school holidays for planning within an explicit from/to window
+    (term breaks, parent events, campaigns).</use_case>
+    <important_notes>Apparent duplicates are the same period per Schulart; set school_type to
+    collapse them. Cantons that do not differentiate return one table.</important_notes>
 
     Args:
         canton: ISO subdivision code, e.g. `CH-ZH`.
@@ -826,6 +867,9 @@ async def get_public_holidays(
 ) -> HolidayListResponse:
     """Return public holidays for one canton and calendar year.
 
+    <use_case>Get a canton's official public holidays for a whole year — cantonal holidays
+    (Berchtoldstag, Fronleichnam) differ, so always pass the canton.</use_case>
+
     Cantonal holidays such as Berchtoldstag differ substantially across
     Switzerland, so always pass the canton rather than assuming the federal set.
     """
@@ -842,6 +886,11 @@ async def get_local_holidays(
     language: Language = "DE",
 ) -> HolidayListResponse:
     """Public holidays for a single municipality or district, incl. local specifics.
+
+    <use_case>Answer the locality question the canton-level tools flatten away: which holidays are
+    observed only in this town (e.g. Zurich's Sechselaeuten)?</use_case>
+    <important_notes>scope is 'local' (specific here), 'regional' (canton/district) or 'national'
+    (inherited). Accepts a name or a full subdivision code.</important_notes>
 
     Answers the local question the canton-level tools flatten away: which holidays
     are observed *only* here? The city of Zurich, for example, keeps Sechseläuten
@@ -866,10 +915,13 @@ async def check_date(
 ) -> DateCheckResponse:
     """Check whether a given date falls into school holidays or a public holiday.
 
+    <use_case>The everyday scheduling question: can we hold the parents' evening on that Thursday?
+    Checks one date against both school and public holidays.</use_case>
+
     The everyday question behind this tool: "Can we schedule the parents'
     evening on that Thursday?"
     """
-    return await op_check_date(_client(ctx), check_date_iso, canton, school_type, language)
+    return await op_check_date(_client(ctx), check_date_iso, canton, school_type, language, ctx=ctx)
 
 
 @mcp.tool(annotations=_RO)
@@ -882,6 +934,9 @@ async def compare_school_holidays(
     language: Language = "DE",
 ) -> OverlapResponse:
     """Compare school holiday overlap between cantons for a calendar year.
+
+    <use_case>Quantify inter-cantonal school-holiday overlap (pairwise day counts) for coordinating
+    events or campaigns across cantonal borders.</use_case>
 
     Returns a pairwise matrix of overlapping holiday days. Defaults to `VS`
     (Volksschule) because that is the level most inter-cantonal coordination
@@ -902,6 +957,9 @@ async def find_common_free_window(
 ) -> WindowResponse:
     """Find date ranges in which all listed cantons are simultaneously on holiday.
 
+    <use_case>Find a common free window across several cantons — joint events, maintenance or
+    campaigns when every listed canton is on holiday.</use_case>
+
     Useful for planning campaigns, joint events or maintenance windows across
     cantonal borders.
     """
@@ -919,7 +977,11 @@ async def next_school_holidays(
     school_type: SchoolTypeCode = "VS",
     language: Language = "DE",
 ) -> HolidayListResponse:
-    """Return the next upcoming school holiday periods for a canton."""
+    """Return the next upcoming school holiday periods for a canton.
+
+    <use_case>Forward-looking planning: the next N school-holiday periods for a canton from today,
+    without computing a date range by hand.</use_case>
+    """
     return await op_next_school_holidays(_client(ctx), canton, count, school_type, language)
 
 
@@ -927,6 +989,11 @@ async def next_school_holidays(
 @_safe_tool
 async def get_long_weekends(ctx: Context, year: Year) -> LongWeekendResponse:
     """Return Swiss long weekends and the bridge days needed to create them.
+
+    <use_case>Plan bridge days: which long weekends exist this year and which working days must be
+    taken off to extend them.</use_case>
+    <important_notes>Computed from federal public holidays (Nager.Date); cantonal-only holidays are
+    not considered.</important_notes>
 
     Sourced from Nager.Date, which computes these from federal public holidays;
     cantonal-only holidays are not considered.
@@ -939,10 +1006,13 @@ async def get_long_weekends(ctx: Context, year: Year) -> LongWeekendResponse:
 async def source_status(ctx: Context) -> StatusResponse:
     """Report reachability and latency of both upstream sources.
 
+    <use_case>Health check before a batch of queries, or to distinguish 'no data' from 'source
+    down' — always returns an evaluable status.</use_case>
+
     Always returns an evaluable status rather than an empty result set, so that
     "no data" can be distinguished from "source down".
     """
-    return await op_source_status(_client(ctx))
+    return await op_source_status(_client(ctx), ctx=ctx)
 
 
 @mcp.tool(annotations=_RO)
@@ -957,13 +1027,16 @@ async def export_holidays_ics(
 ) -> IcsResponse:
     """Export a canton's holidays for a year as an iCalendar (.ics) document.
 
+    <use_case>Produce a ready-to-import .ics calendar of a canton's holidays for a year, filtered
+    by public/school and Schulart.</use_case>
+
     Returns a ready-to-save `text/calendar` document with one all-day event per
     holiday. `include` selects `all` (default), `public` or `school`; combine
     with `school_type` (`VS`/`MS`/`BS`/`EO`) to narrow school holidays.
     """
     try:
         canton_code, periods, provenance, stamp = await op_holidays_bundle(
-            _client(ctx), canton, year, include, school_type, language
+            _client(ctx), canton, year, include, school_type, language, ctx=ctx
         )
     except UpstreamError:
         return IcsResponse(
@@ -999,11 +1072,14 @@ async def is_holiday_today(
 ) -> DateCheckResponse:
     """Is today a school or public holiday in the given canton?
 
+    <use_case>One-call convenience for the everyday 'are we off today?' question in a given
+    canton.</use_case>
+
     Convenience wrapper over `check_date` for the everyday question
     "are we off today?".
     """
     return await op_check_date(
-        _client(ctx), date.today().isoformat(), canton, school_type, language
+        _client(ctx), date.today().isoformat(), canton, school_type, language, ctx=ctx
     )
 
 
@@ -1020,7 +1096,9 @@ async def holidays_resource(canton: str, year: str, ctx: Context) -> str:
     if not MIN_YEAR <= parsed_year <= MAX_YEAR:
         return f"Year {parsed_year} is out of the supported range {MIN_YEAR}-{MAX_YEAR}."
     try:
-        canton_code, periods, _, _ = await op_holidays_bundle(_client(ctx), canton, parsed_year)
+        canton_code, periods, _, _ = await op_holidays_bundle(
+            _client(ctx), canton, parsed_year, ctx=ctx
+        )
     except ValueError as exc:
         return str(exc)
     except UpstreamError:

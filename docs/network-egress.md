@@ -3,6 +3,17 @@
 Audit references: SEC-004 (SSRF), SEC-005 (DNS rebinding), SEC-021 (egress
 allow-list).
 
+Egress is controlled in **two layers** (SEC-021), so a gap in one is caught by
+the other:
+
+| Layer | Where | Artifact |
+|---|---|---|
+| **Code** | in-process, before every socket opens | `ALLOWED_HOSTS` frozenset + `guard.py` |
+| **Network** | pod / host, independent of the app | [`deploy/cilium-egress-fqdn.yaml`](../deploy/cilium-egress-fqdn.yaml), [`deploy/networkpolicy.yaml`](../deploy/networkpolicy.yaml) |
+
+The code layer is always active. The network layer is deployed for any
+networked (non-stdio) hardened deployment.
+
 ## Code-layer allow-list
 
 The server only ever talks to two fixed, public HTTPS hosts. They are pinned in
@@ -29,9 +40,17 @@ language are the only parameters and they are validated (SEC-018).
 
 ## Extending the allow-list
 
-Adding a host is a **code change + review**: edit `ALLOWED_HOSTS` in
-`constants.py`, add the host to the table above, and note it in the CHANGELOG.
-It is deliberately not configurable at runtime.
+Adding a host is a **code change + review** and must be applied to **both
+layers**:
+
+1. Edit `ALLOWED_HOSTS` in `constants.py` and add the host to the table above.
+2. Add the host to the `toFQDNs` list in `deploy/cilium-egress-fqdn.yaml` (and
+   to your egress gateway / security-group rules if you use the stock
+   `networkpolicy.yaml`).
+3. Note it in the CHANGELOG.
+
+It is deliberately not configurable at runtime — a missed network-layer update
+would otherwise silently break the new host while the code layer allows it.
 
 ## Inbound (HTTP transport)
 
@@ -39,12 +58,26 @@ When run with an HTTP transport, the MCP SDK's DNS-rebinding protection is
 enabled with an explicit Host/Origin allow-list (see `__main__._http_security`),
 so browsers on other origins cannot drive the server via a rebinding attack.
 
-## Residual risk (accepted)
+## DNS rebinding / TOCTOU residual (audit SEC-005)
 
-Full outbound DNS **pinning** (reusing the guard's resolved IP for the actual
-TCP connection, TOCTOU-free) is not implemented: httpx re-resolves at connect
-time. Given the two-host frozen allow-list, TLS certificate validation against
-the original hostname, and the IP blocklist above, the residual rebinding
-window is accepted. A network-layer egress policy (NetworkPolicy / security
-group restricting egress to these two hosts) is the recommended
-defense-in-depth for a hardened deployment.
+Full outbound DNS **pinning** in the client (reusing the guard's resolved IP for
+the actual TCP connection, TOCTOU-free) is **not** implemented in code: httpx
+re-resolves at connect time, and forcing an IP with an overridden TLS SNI is
+fragile and breaks when the process runs behind an HTTP proxy (the proxy, not
+the client, resolves the host). The in-process guard therefore reduces — but
+does not eliminate — the window between resolution and connection.
+
+The robust closure is at the **network layer**, and it is now shipped:
+
+- [`deploy/cilium-egress-fqdn.yaml`](../deploy/cilium-egress-fqdn.yaml) —
+  Cilium `toFQDNs` policy. The DNS proxy that enforces it is the authority on
+  which IPs the pod may reach, independent of what the app resolves, so a
+  rebinding answer to a poisoned resolver cannot be connected to.
+- [`deploy/networkpolicy.yaml`](../deploy/networkpolicy.yaml) — stock
+  Kubernetes fallback (DNS + 443 only; pair with an egress gateway for host
+  pinning).
+- Outside Kubernetes: a security-group / Cloudflare-WARP egress rule limiting
+  outbound to these two hosts on 443 achieves the same.
+
+For the documented **local stdio** use-case (no inbound surface, single trusted
+process), the residual is accepted as before.

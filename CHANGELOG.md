@@ -8,6 +8,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Audit remediations from the `mcp-audit` run
 (`audits/2026-07-23T140326-Z-swiss-holidays-mcp/`).
 
+### Added
+
+- **CORS layer exposing `Mcp-Session-Id` on HTTP transports (audit SDK-004).**
+  The HTTP/SSE path now builds the Starlette app in `__main__` and attaches an
+  explicit (never wildcard) CORS layer that exposes/allows `Mcp-Session-Id`, so
+  a browser MCP client on another origin can read the session id and make
+  follow-up requests. New `MCP_CORS_ORIGINS` setting for extra origins.
+- **`match_type` on `HolidayListResponse` (audit ARCH-003).** Locality lookups
+  now return a structured `exact` / `fuzzy` / `none` marker instead of only a
+  free-text note, so a caller can branch on how the query resolved.
+- **Structured `<use_case>` / `<important_notes>` tags on all 13 tools
+  (audit ARCH-002).**
+- **Per-call correlation id + bound tool context in logs (audit OBS-003).**
+  Every log line emitted during a tool call now carries `tool=<name> cid=<id>`
+  via contextvars (stderr-only preserved).
+- **Progress reporting on the network-bound tools (audit SDK-003).**
+  `check_date`, `is_holiday_today`, `source_status`, `export_holidays_ics` and
+  the `holidays://` resource emit `ctx.report_progress` at their milestones.
+- **Network-layer egress manifests (audit SEC-005, SEC-021).**
+  `deploy/cilium-egress-fqdn.yaml` (Cilium `toFQDNs`) and
+  `deploy/networkpolicy.yaml` complement the code-layer allow-list and close the
+  DNS-rebinding TOCTOU residual at the network layer.
+
 ### Security
 
 - **OBS-002 — mask unexpected error details.** This `mcp` SDK version (1.28.1)
@@ -18,6 +41,15 @@ Audit remediations from the `mcp-audit` run
   replaced with a generic message — so tracebacks and internal detail (e.g. an
   upstream-schema `KeyError`) never reach the LLM. Covered by two regression
   tests.
+
+### Documentation
+
+- **Session affinity for scaled HTTP (audit SCALE-002).** `docs/scaling.md`
+  documents the three deployment tiers and sticky-session examples
+  (nginx/Traefik/Kubernetes) for multi-instance HTTP deployments.
+- **Two-layer egress model (audit SEC-021).** `docs/network-egress.md` now
+  describes the code + network layers and requires both to be updated when the
+  allow-list changes.
 
 ### Fixed
 

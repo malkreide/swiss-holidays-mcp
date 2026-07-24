@@ -1,0 +1,34 @@
+# Vanilla Kubernetes NetworkPolicy egress control (audit SEC-005, SEC-021).
+#
+# Fallback for clusters without Cilium. Stock NetworkPolicy cannot match on a
+# hostname (no FQDN support), so this restricts egress to DNS + HTTPS(443) and
+# relies on the code-layer frozenset (constants.py) for host identity. For true
+# host-level pinning, prefer deploy/cilium-egress-fqdn.yaml or an egress gateway
+# that resolves the two hostnames to a pinned CIDR set.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: swiss-holidays-mcp-egress
+  namespace: swiss-holidays-mcp
+spec:
+  podSelector:
+    matchLabels:
+      app: swiss-holidays-mcp
+  policyTypes:
+    - Egress
+  egress:
+    # DNS resolution (kube-dns / CoreDNS).
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Outbound HTTPS only. Narrow `to:` to the upstreams' resolved CIDRs if your
+    # egress gateway pins them; otherwise 443 egress is the tightest stock rule.
+    - ports:
+        - port: 443
+          protocol: TCP

@@ -1,0 +1,45 @@
+# Cilium network-layer egress allow-list (audit SEC-005, SEC-021).
+#
+# This is the *host-level* egress control that complements the code-layer
+# frozenset in constants.py. Cilium's toFQDNs policy restricts outbound traffic
+# to the two upstream hostnames at the network layer, so even if the in-process
+# guard were ever bypassed (a bug, a new un-guarded egress path) the pod cannot
+# reach anything else. It also closes the DNS-rebinding / TOCTOU residual risk
+# (SEC-005): the DNS proxy that enforces toFQDNs is the authority on which IPs
+# the pod may connect to, independent of what the app resolves.
+#
+# Requires Cilium with DNS proxy enabled. Apply into the namespace running the
+# server and set the podSelector label to match your Deployment.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: swiss-holidays-mcp-egress
+  namespace: swiss-holidays-mcp
+spec:
+  endpointSelector:
+    matchLabels:
+      app: swiss-holidays-mcp
+  egress:
+    # 1. Allow DNS to kube-dns so hostname lookups work, and let Cilium's DNS
+    #    proxy observe the answers it will enforce toFQDNs against.
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+          rules:
+            dns:
+              - matchPattern: "*"
+    # 2. Allow HTTPS only to the two upstream hostnames — nothing else.
+    - toFQDNs:
+        - matchName: openholidaysapi.org
+        - matchName: date.nager.at
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

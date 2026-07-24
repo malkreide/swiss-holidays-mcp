@@ -241,6 +241,16 @@ FastMCP exponiert SSE unter `/sse`, nicht unter `/mcp`.
 | `MCP_TRANSPORT` | `stdio` | Transport: `stdio`, `sse`, `streamable-http` (bzw. `http`) |
 | `PORT` / `MCP_PORT` | `8000` | Port für HTTP-Transporte |
 | `MCP_HOST` | `127.0.0.1` | Bind-Adresse für HTTP-Transporte. Standardmässig Loopback; `0.0.0.0` ist Opt-in und erzeugt eine Warnung — hinter authentifizierendem Reverse Proxy betreiben. |
+| `MCP_CORS_ORIGINS` | *(leer)* | Kommaseparierte zusätzliche CORS-Origins für Browser-Clients (Audit SDK-004). Loopback-Origins sind immer erlaubt; ergänze die öffentliche Origin, unter der dein UI ausgeliefert wird, z.B. `https://ui.example.ch`. Niemals `*`. |
+
+Die HTTP-Transporte hängen eine explizite CORS-Schicht an, die den Header
+`Mcp-Session-Id` freigibt, damit ein Browser-MCP-Client die Session-ID lesen
+und Folge-Requests stellen kann. Die Allow-List ist nie eine Wildcard.
+
+Der Betrieb von **mehr als einer HTTP-Instanz** hinter einem Load Balancer
+erfordert Sticky Sessions anhand von `Mcp-Session-Id` — siehe
+[`docs/scaling.md`](docs/scaling.md) für nginx/Traefik/Kubernetes-Beispiele.
+Eine einzelne Instanz (der Normalfall) braucht keine Affinitäts-Konfiguration.
 
 > 💡 *«stdio für den Entwickler-Laptop, SSE für den Browser.»*
 
@@ -268,6 +278,7 @@ swiss-holidays-mcp/
 │   ├── test_resilience.py    # Degradation / Retry / Cache-Verhalten
 │   └── test_live.py          # Live-Smoke-Tests (Marker: live)
 ├── docs/                     # roadmap.md, security.md, network-egress.md
+├── deploy/                   # Network-Layer-Egress-Manifeste (Cilium / NetworkPolicy)
 ├── audits/                   # mcp-audit-Artefakte
 ├── Dockerfile                # Non-root Multi-Stage-Container
 ├── .github/
