@@ -267,6 +267,7 @@ swiss-holidays-mcp/
 │       ├── server.py         # FastMCP server: lifespan, 13 tools, 1 resource, op_* logic
 │       ├── client.py         # Shared HTTP client: retry, 12h cache, egress guard
 │       ├── guard.py          # Egress / SSRF guard (HTTPS + allow-list + IP blocklist)
+│       ├── pinning.py        # DNS-pinning transport (TOCTOU-free connect, SEC-005)
 │       ├── ical.py           # RFC 5545 iCalendar (.ics) writer
 │       ├── settings.py       # Pydantic-Settings config (loopback default)
 │       ├── logging_setup.py  # Structured logging to stderr
@@ -296,6 +297,17 @@ swiss-holidays-mcp/
 ├── README.md                 # This file (English)
 └── README.de.md              # German version
 ```
+
+**On the single-file `server.py` (audit ARCH-011).** The 13 tools deliberately
+live in one module rather than a `tools/` package. Each tool is a thin, uniform
+wrapper (`@mcp.tool` → `@_safe_tool` → `op_*`) over a transport-agnostic `op_*`
+operation, and every operation shares the same small set of helpers
+(`_to_period`, `_matches_school_type`, `_require_known_canton`, …) and the one
+`HolidayClient`. Splitting these across files would scatter that shared core and
+duplicate imports for no isolation benefit — the file is uniformly sectioned
+(aliases → helpers → `op_*` logic → tool wrappers → resource) and every `op_*`
+is unit-tested directly without a transport. A `tools/` split is the planned
+step **only** if Phase 2 pushes the tool count materially higher.
 
 ---
 

@@ -58,16 +58,24 @@ When run with an HTTP transport, the MCP SDK's DNS-rebinding protection is
 enabled with an explicit Host/Origin allow-list (see `__main__._http_security`),
 so browsers on other origins cannot drive the server via a rebinding attack.
 
-## DNS rebinding / TOCTOU residual (audit SEC-005)
+## DNS rebinding / TOCTOU (audit SEC-005)
 
-Full outbound DNS **pinning** in the client (reusing the guard's resolved IP for
-the actual TCP connection, TOCTOU-free) is **not** implemented in code: httpx
-re-resolves at connect time, and forcing an IP with an overridden TLS SNI is
-fragile and breaks when the process runs behind an HTTP proxy (the proxy, not
-the client, resolves the host). The in-process guard therefore reduces — but
-does not eliminate — the window between resolution and connection.
+Outbound DNS is now **pinned in the client** for direct connections. Each
+request goes through
+[`PinnedResolverTransport`](../src/swiss_holidays_mcp/pinning.py): the host is
+resolved **once** to an SSRF-safe IP (`guard.resolve_pinned`) and the TCP
+connection is pinned to exactly that IP, while the `Host` header, TLS SNI and
+certificate hostname check still use the original hostname. Because the pinned
+IP is the one actually connected to — there is no second lookup — the
+rebinding TOCTOU window is closed. Verified by a loopback TLS test
+(`tests/test_pinning.py`): a request pinned to `127.0.0.1` still validates the
+certificate against the hostname, and an unpinned IP connection without SNI is
+rejected.
 
-The robust closure is at the **network layer**, and it is now shipped:
+Pinning is **skipped behind a forward proxy** (`HTTPS_PROXY`/`ALL_PROXY`): the
+proxy owns DNS resolution there, and rewriting the URL to an IP would break the
+proxy `CONNECT`. In that case — and as defense-in-depth generally — the
+**network layer** is the robust control, and it is shipped:
 
 - [`deploy/cilium-egress-fqdn.yaml`](../deploy/cilium-egress-fqdn.yaml) —
   Cilium `toFQDNs` policy. The DNS proxy that enforces it is the authority on
@@ -79,5 +87,6 @@ The robust closure is at the **network layer**, and it is now shipped:
 - Outside Kubernetes: a security-group / Cloudflare-WARP egress rule limiting
   outbound to these two hosts on 443 achieves the same.
 
-For the documented **local stdio** use-case (no inbound surface, single trusted
-process), the residual is accepted as before.
+For the documented **local stdio** use-case the client-side pin already closes
+the window; the network-layer policy is the recommended addition for any
+networked/hardened deployment.

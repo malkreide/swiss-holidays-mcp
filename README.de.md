@@ -267,6 +267,7 @@ swiss-holidays-mcp/
 │       ├── server.py         # FastMCP-Server: Lifespan, 13 Tools, 1 Resource, op_*-Logik
 │       ├── client.py         # Geteilter HTTP-Client: Retry, 12h-Cache, Egress-Guard
 │       ├── guard.py          # Egress-/SSRF-Guard (HTTPS + Allow-List + IP-Blocklist)
+│       ├── pinning.py        # DNS-Pinning-Transport (TOCTOU-freier Connect, SEC-005)
 │       ├── ical.py           # RFC-5545-iCalendar-(.ics)-Writer
 │       ├── settings.py       # Pydantic-Settings-Konfig (Loopback-Default)
 │       ├── logging_setup.py  # Strukturiertes Logging auf stderr
@@ -296,6 +297,17 @@ swiss-holidays-mcp/
 ├── README.md                 # Englische Version
 └── README.de.md              # Diese Datei
 ```
+
+**Zur Einzeldatei `server.py` (Audit ARCH-011).** Die 13 Tools liegen bewusst
+in einem Modul statt in einem `tools/`-Package. Jedes Tool ist ein dünner,
+einheitlicher Wrapper (`@mcp.tool` → `@_safe_tool` → `op_*`) über eine
+transport-agnostische `op_*`-Operation, und alle Operationen teilen dieselben
+Helfer (`_to_period`, `_matches_school_type`, `_require_known_canton`, …) und den
+einen `HolidayClient`. Eine Aufteilung würde diesen gemeinsamen Kern zerstreuen
+und Importe duplizieren, ohne Isolationsgewinn — die Datei ist einheitlich
+gegliedert (Aliases → Helfer → `op_*`-Logik → Tool-Wrapper → Resource) und jede
+`op_*`-Funktion wird direkt ohne Transport getestet. Ein `tools/`-Split ist der
+geplante Schritt **nur**, falls Phase 2 die Tool-Zahl deutlich erhöht.
 
 ---
 

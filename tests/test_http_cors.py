@@ -24,7 +24,9 @@ def test_streamable_http_cors_allows_and_exposes_session_id():
 
 
 def test_cors_origin_list_is_never_wildcard_and_includes_extras():
-    settings = Settings(transport="streamable-http", port=9000, cors_origins="https://ui.example.ch")
+    settings = Settings(
+        transport="streamable-http", port=9000, cors_origins="https://ui.example.ch"
+    )
     origins = settings.cors_origin_list
     assert "*" not in origins
     assert "https://ui.example.ch" in origins
