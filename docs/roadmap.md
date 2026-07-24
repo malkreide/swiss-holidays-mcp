@@ -6,7 +6,7 @@ transitions require the documented prerequisites below and are recorded in
 
 ## Phase 1 — Read-only (current)
 
-- **Status:** active (v0.5.0).
+- **Status:** active (v0.6.0).
 - All 13 tools are annotated `readOnlyHint: true`, `destructiveHint: false`,
   `idempotentHint: true`, `openWorldHint: true`.
 - No authentication, no write operations, no side effects.
