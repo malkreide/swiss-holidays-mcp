@@ -19,6 +19,7 @@ form is kept for tests, where it owns and closes its own client.
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -37,6 +38,7 @@ from .constants import (
     USER_AGENT,
 )
 from .logging_setup import get_logger
+from .pinning import PinnedResolverTransport
 
 MAX_ATTEMPTS = 4
 CACHE_TTL_SECONDS = 60 * 60 * 12  # holiday tables change a few times per year
@@ -54,13 +56,36 @@ class UpstreamEmpty(RuntimeError):
     """Upstream answered 200 but with an empty payload — usually a bad filter."""
 
 
-def build_http_client() -> httpx.AsyncClient:
-    """Create the shared HTTP client used for the whole server lifetime."""
-    return httpx.AsyncClient(
-        timeout=httpx.Timeout(REQUEST_TIMEOUT),
-        headers={"User-Agent": USER_AGENT},
-        follow_redirects=False,  # never chase a redirect off the allow-listed host
+def _forward_proxy_active() -> bool:
+    """True if an HTTPS/ALL forward proxy is configured via the environment.
+
+    When a proxy is in play it — not this process — resolves DNS, so client-side
+    pinning is both moot and harmful (rewriting the URL to an IP breaks the proxy
+    CONNECT). We conservatively disable pinning if any such proxy var is set.
+    """
+    return any(
+        os.environ.get(var) for var in ("HTTPS_PROXY", "https_proxy", "ALL_PROXY", "all_proxy")
     )
+
+
+def build_http_client() -> httpx.AsyncClient:
+    """Create the shared HTTP client used for the whole server lifetime.
+
+    On a direct connection the client pins DNS via ``PinnedResolverTransport``
+    (SEC-005): the guard resolves each host once to an SSRF-safe IP and the
+    connection uses exactly that IP, closing the DNS-rebinding TOCTOU window.
+    Behind a forward proxy the proxy owns resolution, so pinning is skipped and
+    a network-layer egress policy is the recommended control (see ``deploy/``).
+    """
+    base: dict[str, Any] = {
+        "timeout": httpx.Timeout(REQUEST_TIMEOUT),
+        "headers": {"User-Agent": USER_AGENT},
+        "follow_redirects": False,  # never chase a redirect off the allow-listed host
+    }
+    if _forward_proxy_active():
+        return httpx.AsyncClient(**base)  # trust_env picks up the proxy; no pinning
+    transport = PinnedResolverTransport(httpx.AsyncHTTPTransport())
+    return httpx.AsyncClient(transport=transport, trust_env=False, **base)
 
 
 def utc_now_iso() -> str:

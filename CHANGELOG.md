@@ -10,6 +10,13 @@ Audit remediations from the `mcp-audit` run
 
 ### Added
 
+- **Client-side DNS pinning (audit SEC-005).** Direct connections now go through
+  `PinnedResolverTransport`: each host is resolved once to an SSRF-safe IP
+  (`guard.resolve_pinned`) and the TCP connection is pinned to exactly that IP,
+  while the `Host` header, TLS SNI and certificate hostname check stay on the
+  name — closing the DNS-rebinding TOCTOU window. Skipped behind a forward proxy
+  (the proxy owns resolution); the network-layer policy is the control there.
+  Verified by a loopback TLS test.
 - **CORS layer exposing `Mcp-Session-Id` on HTTP transports (audit SDK-004).**
   The HTTP/SSE path now builds the Starlette app in `__main__` and attaches an
   explicit (never wildcard) CORS layer that exposes/allows `Mcp-Session-Id`, so
@@ -50,6 +57,11 @@ Audit remediations from the `mcp-audit` run
 - **Two-layer egress model (audit SEC-021).** `docs/network-egress.md` now
   describes the code + network layers and requires both to be updated when the
   allow-list changes.
+- **Single-file `server.py` rationale (audit ARCH-011).** README (both
+  languages) now documents why the 13 tools deliberately live in one module
+  (thin uniform wrappers over shared `op_*` helpers + one client) — the
+  catalogue-accepted justification for the layout, with a `tools/` split planned
+  only if Phase 2 grows the tool count materially.
 
 ### Fixed
 

@@ -67,8 +67,9 @@ def assert_resolved_ip_safe(host: str) -> None:
     """Resolve ``host`` once and reject SSRF-flavoured addresses.
 
     A single ``getaddrinfo`` call is used so there is one resolution to reason
-    about (TOCTOU is not fully eliminated because httpx re-resolves for the
-    actual connection — see docs/network-egress.md 'Residual risk').
+    about. For direct (non-proxied) connections the resolved IP is additionally
+    *pinned* for the actual TCP connection via ``resolve_pinned`` +
+    ``PinnedResolverTransport`` (SEC-005), closing the TOCTOU window.
     """
     infos = socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
     ips = {info[4][0] for info in infos}
@@ -78,3 +79,22 @@ def assert_resolved_ip_safe(host: str) -> None:
             f"Host {host!r} resolved to blocked address(es) {blocked} — "
             "refusing egress (possible SSRF / DNS poisoning)."
         )
+
+
+def resolve_pinned(host: str) -> str:
+    """Resolve ``host`` once and return a single SSRF-safe IP to pin the TCP
+    connection to (audit SEC-005).
+
+    The returned address is the one the connection actually uses — there is no
+    second resolution at connect time — which removes the DNS-rebinding TOCTOU
+    window. Raises ``EgressError`` if the host resolves to nothing safe.
+    """
+    infos = socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+    ips = [info[4][0] for info in infos]
+    safe = [ip for ip in ips if not _is_blocked_ip(ip)]
+    if not safe:
+        raise EgressError(
+            f"Host {host!r} resolved to no SSRF-safe address ({sorted(set(ips))}) — "
+            "refusing egress (possible SSRF / DNS poisoning)."
+        )
+    return safe[0]

@@ -39,8 +39,11 @@ HTTPS-only, IP blocklist incl. cloud-metadata, `follow_redirects=False`.
 Egress is enforced in two layers (SEC-021): the in-process guard plus a
 network-layer policy for hardened deployments
 ([`deploy/cilium-egress-fqdn.yaml`](../deploy/cilium-egress-fqdn.yaml),
-[`deploy/networkpolicy.yaml`](../deploy/networkpolicy.yaml)), which also closes
-the DNS-rebinding TOCTOU residual (SEC-005).
+[`deploy/networkpolicy.yaml`](../deploy/networkpolicy.yaml)). DNS rebinding is
+closed at the code layer by pinning the connection to the once-resolved,
+SSRF-validated IP while TLS still validates the hostname
+([`pinning.py`](../src/swiss_holidays_mcp/pinning.py), SEC-005); behind a
+forward proxy the network-layer policy is the equivalent control.
 
 ## Lethal-trifecta assessment (audit SEC-019)
 
