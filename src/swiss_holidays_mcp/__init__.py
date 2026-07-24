@@ -1,6 +1,6 @@
 """Swiss School Calendar MCP — school and public holidays for all 26 cantons."""
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 from .server import mcp
 

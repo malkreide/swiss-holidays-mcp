@@ -3,10 +3,12 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.6.0] — 2026-07-24
 
-Audit remediations from the `mcp-audit` run
-(`audits/2026-07-23T140326-Z-swiss-holidays-mcp/`).
+Audit-hardening release. Closes all 10 findings from the `mcp-audit` run
+(`audits/2026-07-23T140326-Z-swiss-holidays-mcp/`); the final re-audit
+(`audits/2026-07-24T091128-Z-swiss-holidays-mcp/`) records **36 pass / 0
+partial / 0 fail**, production-ready. No breaking changes.
 
 ### Added
 
