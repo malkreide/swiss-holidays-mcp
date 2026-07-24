@@ -1,0 +1,43 @@
+{
+  "audit_meta": {
+    "server_name": "swiss-holidays-mcp",
+    "run_id": "2026-07-24T073448-Z-swiss-holidays-mcp",
+    "started_at": "2026-07-24T07:34:48.469972+00:00",
+    "timezone_offset": "Z",
+    "skill_version": "1.0.0",
+    "output_dir": "/home/user/swiss-holidays-mcp/audits/2026-07-24T073448-Z-swiss-holidays-mcp",
+    "catalog_hash": "091f446b27965044ce658a1d5f4b2cabe2b0ab5661dcc1a53b6be8f1f2e093c0",
+    "catalog_dir": "/root/.claude/skills/mcp-audit/checks",
+    "finished_at": "2026-07-24T07:40:00+00:00",
+    "reaudit_of": "2026-07-23T140326-Z-swiss-holidays-mcp",
+    "verification_method": "single-file code review + evidence grep sweep; no Task-agent delegation",
+    "findings_policy": "fail-or-partial",
+    "coverage": {
+      "checks_in_catalog": 68,
+      "applicable": 36,
+      "evaluated": 37,
+      "not_applicable": 1,
+      "pass": 34,
+      "partial": 2,
+      "fail": 0,
+      "production_ready": true
+    },
+    "delta_vs_prior": {
+      "resolved": [
+        "ARCH-002",
+        "ARCH-003",
+        "OBS-002",
+        "OBS-003",
+        "SCALE-002",
+        "SDK-003",
+        "SDK-004",
+        "SEC-021"
+      ],
+      "still_partial": [
+        "ARCH-011",
+        "SEC-005"
+      ]
+    }
+  },
+  "agent_runs": []
+}

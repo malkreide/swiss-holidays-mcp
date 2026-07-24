@@ -1,0 +1,464 @@
+{
+  "audit_meta": {
+    "server_name": "swiss-holidays-mcp",
+    "run_id": "2026-07-24T073448-Z-swiss-holidays-mcp",
+    "audit_date": "2026-07-24",
+    "skill_version": "1.0.0",
+    "catalog_version": "68-checks (v0.5.0 catalog)",
+    "catalog_hash": "091f446b27965044ce658a1d5f4b2cabe2b0ab5661dcc1a53b6be8f1f2e093c0",
+    "profile": {
+      "transport": "dual",
+      "auth_model": "none",
+      "data_class": "Public Open Data",
+      "write_capable": false,
+      "deployment": [
+        "local-stdio"
+      ],
+      "tools_make_external_requests": true
+    },
+    "findings_policy": "fail-or-partial",
+    "verification_method": "single-file code review (no Task-agent delegation; 4.5 gate n/a)",
+    "reaudit_of": "2026-07-23T140326-Z-swiss-holidays-mcp",
+    "note": "Re-audit after merging PR #14 (audit), #15 (OBS-002, ARCH-011 doc), #16 (remaining 8). Same catalog_hash; same profile."
+  },
+  "results": {
+    "ARCH-001": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "13 tools all snake_case, one consistent convention (server.py:737-963): list_cantons, get_school_holidays, check_date, ...",
+        "No spaces/dots/brackets/unicode in any tool name",
+        "Descriptions carry use-case context, e.g. check_date: 'Can we schedule the parents' evening on that Thursday?' (server.py:830-834)"
+      ],
+      "gaps": []
+    },
+    "ARCH-002": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "All 13 tools now carry a structured <use_case> tag; 3 also carry <important_notes> (server.py, verified: grep -c '<use_case>' == 13)",
+        "Regression test asserts every registered tool description exposes <use_case> (tests/test_tools.py::test_all_tools_carry_use_case_tag)",
+        "Similar tools remain differentiated in prose (get_local vs get_public/get_school)"
+      ],
+      "gaps": []
+    },
+    "ARCH-003": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "HolidayListResponse.match_type: Literal['exact','fuzzy','none'] added (models.py)",
+        "_resolve_locality returns the match_type; a single prefix hit is 'fuzzy' and the note flags it; no match is 'none' (server.py)",
+        "Tests cover exact / fuzzy (prefix) / none (tests/test_local.py)"
+      ],
+      "gaps": []
+    },
+    "ARCH-004": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "high",
+      "evidence": [
+        "Tool handlers take only ctx: Context; no direct request access (server.py:116-117, _client(ctx))",
+        "Dual transport selected via MCP_TRANSPORT env through Settings (settings.py:21, __main__.py:41-60)",
+        "Config is a pydantic-settings object, not module globals (settings.py:18-36)",
+        "Transport-agnostic op_* functions carry all logic; tool wrappers are thin (server.py:220-711)",
+        "Single shared lifespan for all transports (server.py:78-88)"
+      ],
+      "gaps": []
+    },
+    "ARCH-005": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "critical",
+      "evidence": [
+        "No API keys/passwords/tokens anywhere: both upstreams are keyless (client.py, constants.py)",
+        ".gitignore excludes .env (.gitignore:12)",
+        "No os.environ default secrets; config via pydantic-settings (settings.py)"
+      ],
+      "gaps": [
+        "No dedicated gitleaks/trufflehog CI step and no .env.example — both moot here (the server holds no secrets at all), CI runs pip-audit instead."
+      ]
+    },
+    "ARCH-006": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "high",
+      "evidence": [
+        "13 tools, rationale documented in the module docstring (server.py:9-12) — within the 15-20 budget with Phase-2 headroom",
+        "No 1:1 REST mapping: check_date and holidays_bundle aggregate the two upstreams (server.py:451-456, 687-692)",
+        "Anchor query ('is date X a holiday in canton Y') answered in one check_date call"
+      ],
+      "gaps": []
+    },
+    "ARCH-007": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "Aggregating tools parallelise with asyncio.gather (server.py:453-456 check_date, 692 holidays_bundle)",
+        "Tools return self-contained results (full HolidayPeriod objects), not IDs for follow-up calls (models.py:59-86)",
+        "Every response carries source + provenance so the LLM can explain the origin (models.py:17-28)"
+      ],
+      "gaps": []
+    },
+    "ARCH-008": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "Two primitives: 13 Tools + 1 Resource holidays://{canton}/{year} (server.py:966-984)",
+        "Resource URI schema is consistent and documented (README 'Resources' section, server.py:966-971)"
+      ],
+      "gaps": []
+    },
+    "ARCH-009": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "high",
+      "evidence": [
+        "All 13 tools share the explicit _RO annotation block: readOnlyHint/destructiveHint/idempotentHint/openWorldHint (server.py:95-100, applied at every @mcp.tool(annotations=_RO))",
+        "openWorldHint: true is correct — every tool reaches an external HTTP source",
+        "Annotations overview documented in README ('MCP Primitives') and docs/roadmap.md"
+      ],
+      "gaps": []
+    },
+    "ARCH-011": {
+      "status": "partial",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "Doc drift resolved: docs/security.md and docs/roadmap.md now say 13 tools / v0.5.0 (verified: no '10 tools' / 'v0.2.0' remaining)",
+        "All mandatory top-level files + src-layout + tests + workflows present; README.de.md mirrors README.md"
+      ],
+      "gaps": [
+        "13 tools still live in a single ~1109-line server.py; the catalogue asks for a tools/ package split (file-per-group) above 5 tools, and no README justification for the single-file layout is documented. This is the sole remaining ARCH-011 gap."
+      ]
+    },
+    "ARCH-012": {
+      "status": "pass",
+      "category": "ARCH",
+      "severity": "medium",
+      "evidence": [
+        "protocolVersion pinned explicitly: MCP_PROTOCOL_VERSION = '2025-06-18' (constants.py:21), surfaced in source_status",
+        "CHANGELOG.md in Keep-a-Changelog format present",
+        "README has an 'MCP Protocol Version' section; Dependabot opens weekly SDK/action PRs (.github/dependabot.yml)"
+      ],
+      "gaps": [
+        "roadmap.md version marker (v0.2.0) is stale vs pyproject 0.5.0 — cosmetic, does not affect the pinned wire version."
+      ]
+    },
+    "CH-004": {
+      "status": "pass",
+      "category": "CH",
+      "severity": "medium",
+      "evidence": [
+        "Every response envelope carries a source string with licence: OpenHolidays 'CC BY 4.0', Nager.Date 'MIT' (constants.py:29-36, models.py:20)",
+        "README 'Data Sources' section and docs/network-egress.md list both sources with licences",
+        "Per-response provenance (live_api/cached/degraded) preserved, not only a global note (models.py:21-24)",
+        "Attribution text names source + licence + notes the unofficial aggregation (CC BY modification hint)"
+      ],
+      "gaps": []
+    },
+    "CH-006": {
+      "status": "pass",
+      "category": "CH",
+      "severity": "high",
+      "evidence": [
+        "docs/security.md documents a classification table per data type; highest level = Oeffentlich (public)",
+        "Explicitly states no PII / no ISDS / no DSG processing record required in Phase 1",
+        "Aggregation note addresses re-identification: no personal micro-data, so no k-anonymity concern"
+      ],
+      "gaps": []
+    },
+    "OBS-001": {
+      "status": "pass",
+      "category": "OBS",
+      "severity": "high",
+      "evidence": [
+        "Upstream failures are caught and returned as a degraded response envelope (a valid tool result, not a JSON-RPC error) with a user-safe note (server.py:198-210, client.py UpstreamError)",
+        "Validation failures raise ValueError → surfaced as an execution error by FastMCP (server.py:150-153)",
+        "test_resilience.py covers the degraded/execution-error path; test_tools.py covers input-validation rejection"
+      ],
+      "gaps": []
+    },
+    "OBS-002": {
+      "status": "pass",
+      "category": "OBS",
+      "severity": "high",
+      "evidence": [
+        "This SDK (mcp 1.28.1) has no mask_error_details flag; a _safe_tool decorator wraps all 13 tools (server.py, verified: grep -c '@_safe_tool' == 13)",
+        "Deliberate ValueError messages pass through; every other exception is logged to stderr only and replaced with a generic message — tracebacks never reach the LLM",
+        "Two regression tests: masks an unexpected KeyError, passes a validation ValueError (tests/test_tools.py)"
+      ],
+      "gaps": []
+    },
+    "OBS-003": {
+      "status": "pass",
+      "category": "OBS",
+      "severity": "medium",
+      "evidence": [
+        "Per-call correlation id + tool name bound via contextvars in the _safe_tool wrapper; the formatter emits 'tool=<name> cid=<id>' on every line while a call runs (logging_setup.py, server.py)",
+        "Tests cover bind/unbind and cid stability within a call (tests/test_logging.py)",
+        "Structured logfmt output on stderr, multiple severities in use"
+      ],
+      "gaps": [
+        "Deliberate deviation (documented in CHANGELOG): the recommended structlog/loguru dependency was not added; the existing logfmt formatter + contextvars binding is the accepted equivalent. session_id is out of scope (no auth / stdio-first)."
+      ]
+    },
+    "OBS-004": {
+      "status": "pass",
+      "category": "OBS",
+      "severity": "critical",
+      "evidence": [
+        "Logging handler is pinned to sys.stderr (logging_setup.py:37) — stdout stays clean for the stdio JSON-RPC channel",
+        "No print() statements anywhere in src/ (verified: grep -rn 'print(' src/ → none)",
+        "Same logging config runs for both transports, no transport-dependent switch (logging_setup.py, __main__.py)"
+      ],
+      "gaps": []
+    },
+    "OPS-001": {
+      "status": "pass",
+      "category": "OPS",
+      "severity": "high",
+      "evidence": [
+        "Unit tests are respx-mocked and offline (conftest.py stubs DNS; test_tools/test_resilience/test_feed/test_ical/test_local)",
+        "test_live.py exists and is marked pytestmark = pytest.mark.live",
+        "Marker registered in pyproject.toml ([tool.pytest.ini_options] markers = ['live: ...'])",
+        "CI runs pytest -m 'not live' (ci.yml); a separate live-tests.yml workflow exists for live runs"
+      ],
+      "gaps": [
+        "Live tests cover a representative subset of tools rather than one live test per each of the 13 tools."
+      ]
+    },
+    "OPS-002": {
+      "status": "pass",
+      "category": "OPS",
+      "severity": "medium",
+      "evidence": [
+        "README.md has all mandatory sections incl. Overview/Features, Installation, Tools, Configuration, Safety & Limits, Architecture (ASCII diagram), Known Limitations, License",
+        "README.de.md mirrors the same top-level sections (bilingual)",
+        "CHANGELOG.md in Keep-a-Changelog format; CONTRIBUTING.md + CONTRIBUTING.de.md present (bilingual)"
+      ],
+      "gaps": []
+    },
+    "OPS-003": {
+      "status": "pass",
+      "category": "OPS",
+      "severity": "high",
+      "evidence": [
+        "README 'Lifecycle Phase' section declares Phase 1 (read-only); docs/roadmap.md details Phase 1/2/3 with transition prerequisites",
+        "Phase matches annotations: all tools readOnlyHint/destructiveHint:false, no write/destructive tools",
+        "Phase-1→2 prerequisites listed incl. the completed audit run"
+      ],
+      "gaps": [
+        "roadmap.md is stale ('active (v0.2.0)', 'all 10 tools') vs the current 0.5.0 / 13 tools — the phase itself is correct, only the version/count markers drifted."
+      ]
+    },
+    "SCALE-002": {
+      "status": "pass",
+      "category": "SCALE",
+      "severity": "high",
+      "evidence": [
+        "docs/scaling.md documents the three deployment tiers and, for multi-instance HTTP, concrete sticky-session configs keyed on Mcp-Session-Id (nginx hash, Traefik, Kubernetes ingress)",
+        "The only cross-instance state (MCP session) and its affinity requirement are made explicit; single-instance (the default) needs no config",
+        "Linked from README (both languages)"
+      ],
+      "gaps": [
+        "Affinity is delegated to the operator's LB via documented config; no committed sticky-session manifest or automated failover test in CI (single-instance default)."
+      ]
+    },
+    "SDK-001": {
+      "status": "pass",
+      "category": "SDK",
+      "severity": "high",
+      "evidence": [
+        "Lifespan defined with @asynccontextmanager (server.py:78-85)",
+        "FastMCP('swiss-holidays-mcp', lifespan=lifespan) (server.py:88)",
+        "HTTP client closed in the finally block (server.py:82-85); one shared httpx.AsyncClient + cache, never per tool-call (client.py:57-63, SDK-001 comments)"
+      ],
+      "gaps": []
+    },
+    "SDK-002": {
+      "status": "pass",
+      "category": "SDK",
+      "severity": "medium",
+      "evidence": [
+        "pydantic>=2.7 in dependencies (pyproject.toml)",
+        "Every tool has an explicit BaseModel return annotation (server.py:737-963, models.py)",
+        "Consistent envelope with source/provenance/retrieved_at + count on list responses (models.py:17-28, 97-99)",
+        "Literal types for enumerable values: Provenance, kind, scope, level (models.py:14, 63-69)"
+      ],
+      "gaps": []
+    },
+    "SDK-003": {
+      "status": "pass",
+      "category": "SDK",
+      "severity": "medium",
+      "evidence": [
+        "ctx.report_progress emitted at milestones in the network-bound ops: op_check_date and op_holidays_bundle (before/after the gather), op_source_status (per probe) (server.py, via the _report helper)",
+        "ctx threaded through all five tool/resource call sites; a no-op without ctx or a client progress token",
+        "Test asserts op_check_date emits 0->1 progress with a fake ctx (tests/test_tools.py)"
+      ],
+      "gaps": [
+        "Body logging still uses the stdlib logger rather than ctx.info(); deliberate to keep stderr discipline (OBS-004)."
+      ]
+    },
+    "SDK-004": {
+      "status": "pass",
+      "category": "SDK",
+      "severity": "high",
+      "evidence": [
+        "HTTP path builds the Starlette app in __main__._build_http_app and attaches CORSMiddleware that exposes AND allows Mcp-Session-Id (__main__.py)",
+        "allow_origins is Settings.cors_origin_list — loopback origins + MCP_CORS_ORIGINS extras, never a wildcard (settings.py)",
+        "transport_security allowed_origins reuses the same list; tests cover a preflight exposing Mcp-Session-Id and an off-list origin being refused (tests/test_http_cors.py)"
+      ],
+      "gaps": []
+    },
+    "SEC-004": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "critical",
+      "evidence": [
+        "HTTPS scheme enforced before every request (guard.py:38-40)",
+        "Resolved IP checked against a blocklist: private/loopback/link-local/multicast/reserved/unspecified (guard.py:49-63)",
+        "Cloud-metadata IPs explicitly blocked incl. IPv6 fd00:ec2::254 (guard.py:26, 49-51)",
+        "guard.assert_host_allowed + assert_resolved_ip_safe called before the socket opens (client.py:117-118); follow_redirects=False (client.py:62)"
+      ],
+      "gaps": []
+    },
+    "SEC-005": {
+      "status": "partial",
+      "category": "SEC",
+      "severity": "high",
+      "evidence": [
+        "DNS resolved once in the guard before the request; TLS validates the original hostname; two-host frozen allow-list bounds exposure (guard.py, constants.py)",
+        "Network-layer control now shipped (deploy/cilium-egress-fqdn.yaml toFQDNs) — its DNS proxy is the authority on reachable IPs, robustly closing the rebinding window at deploy time; documented in docs/network-egress.md"
+      ],
+      "gaps": [
+        "Client-side DNS pinning (reusing the guard's resolved IP for the TCP connection, TOCTOU-free) is still NOT implemented in code — httpx re-resolves at connect. Deliberate: an IP-with-overridden-SNI is fragile and breaks behind an HTTP proxy. Mitigated, not eliminated, at the code layer; the network layer is the robust closure."
+      ]
+    },
+    "SEC-006": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "high",
+      "evidence": [
+        "Default transport is stdio when no env var is set (settings.py:21, __main__.py:58-60)",
+        "SSE/HTTP only activates via explicit MCP_TRANSPORT (settings.py:29-31)",
+        "README documents the local stdio + Claude Desktop use-case primarily and the cloud case separately with security notes"
+      ],
+      "gaps": []
+    },
+    "SEC-007": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "high",
+      "evidence": [
+        "Dockerfile creates and switches to an unprivileged user, uid 10001 (>= 10000): useradd --uid 10001 appuser; USER appuser (Dockerfile)",
+        "Multi-stage build keeps the runtime image lean",
+        "No file-write tools, so no writable volume mounts are required"
+      ],
+      "gaps": [
+        "No Kubernetes securityContext manifest (readOnlyRootFilesystem, capabilities.drop, seccomp) — not applicable to the documented local-stdio/container deployment; would be the next step for a K8s target."
+      ]
+    },
+    "SEC-008": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "medium",
+      "evidence": [
+        "No pre/postinstall hooks; standard pip/uvx install (pyproject.toml, README Installation)",
+        "README shows the full install command transparently",
+        "PyPI publish uses OIDC Trusted Publisher (publish.yml: environment pypi, permissions id-token: write); MCP registry publish also via GitHub OIDC"
+      ],
+      "gaps": []
+    },
+    "SEC-009": {
+      "status": "n/a",
+      "category": "SEC",
+      "severity": "critical",
+      "evidence": [
+        "auth_model is none: the server has no authentication and no user-identity concept (settings.py, docs/security.md 'no built-in authentication')",
+        "README/docs mandate an authenticating reverse proxy in front for any network deployment"
+      ],
+      "gaps": [
+        "The check's user_id:session_id cryptographic binding presupposes an auth model this server intentionally does not have; session/user binding is delegated to the reverse proxy. Not applicable to the current profile."
+      ]
+    },
+    "SEC-013": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "high",
+      "evidence": [
+        "Public Open Data profile: no API keys needed (both upstreams keyless) — Stufe 1 is acceptable and documented",
+        "Secret handling documented in docs/security.md 'Supply chain' (equivalent of docs/secret-management.md)",
+        "Container image contains no secrets in any layer (no ENV secrets in Dockerfile)"
+      ],
+      "gaps": [
+        "Documentation lives in docs/security.md rather than a dedicated docs/secret-management.md file named in the catalogue — content is present."
+      ]
+    },
+    "SEC-016": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "critical",
+      "evidence": [
+        "No 0.0.0.0 default in code: host defaults to 127.0.0.1 (settings.py:22-25)",
+        "Host is env-configurable (MCP_HOST); 0.0.0.0 is only set explicitly in the Dockerfile (Dockerfile ENV MCP_HOST=0.0.0.0)",
+        "Binding all interfaces logs a warning at startup (__main__.py:42-51); README explains the local vs container distinction"
+      ],
+      "gaps": []
+    },
+    "SEC-018": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "high",
+      "evidence": [
+        "All tool arguments carry pydantic Field schemas: CantonCode/IsoDate/SchoolTypeCode/Language/Include patterns (server.py:103-110)",
+        "Numeric inputs bounded: Year ge/le MIN_YEAR/MAX_YEAR, min_days ge=1 le=90, count ge=1 le=20 (server.py:107, 860, 878)",
+        "Patterns are whitelist-based (regex), not blacklist; unknown cantons rejected against the 26-code set (server.py:146-153)",
+        "test_tools.py exercises validation/edge cases; invalid input returns an error result, not a crash"
+      ],
+      "gaps": [
+        "strict=True / extra='forbid' are not explicitly set on the tool-input models; the comprehensive Field patterns and range bounds provide equivalent defense-in-depth."
+      ]
+    },
+    "SEC-019": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "critical",
+      "evidence": [
+        "docs/security.md 'Lethal-trifecta assessment' documents the evaluation",
+        "Only the 'private-data' leg exists, and only in the weakest sense (public data); no write/send leg — all tools are read-only (server.py:95-100)",
+        "No untrusted-instruction ingestion that could be acted upon; the trifecta is not present"
+      ],
+      "gaps": [
+        "The assessment text still says 'all 10 tools' (now 13) — count drift only; the read-only conclusion is unchanged since all 13 tools share the read-only annotation."
+      ]
+    },
+    "SEC-020": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "critical",
+      "evidence": [
+        "No os.system/os.popen/eval/exec/subprocess/shell=True anywhere in src/ (verified: grep -rnE over src/ → none)",
+        "No shell-outs at all; the only external interaction is httpx GETs with validated params",
+        "Requests carry timeouts (client.py:43, REQUEST_TIMEOUT/PROBE_TIMEOUT) guarding against resource exhaustion"
+      ],
+      "gaps": []
+    },
+    "SEC-021": {
+      "status": "pass",
+      "category": "SEC",
+      "severity": "high",
+      "evidence": [
+        "Code-layer allow-list: immutable frozenset ALLOWED_HOSTS + pre-request assert_host_allowed (constants.py, client.py, guard.py)",
+        "Network-layer now shipped: deploy/cilium-egress-fqdn.yaml (Cilium toFQDNs) and deploy/networkpolicy.yaml (stock K8s fallback)",
+        "docs/network-egress.md describes the two-layer model and requires BOTH layers to be updated when the allow-list changes; referenced from README + security.md"
+      ],
+      "gaps": []
+    }
+  }
+}
