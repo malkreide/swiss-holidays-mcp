@@ -29,6 +29,10 @@ Der Server deckt zwei thematische Cluster ab: **Feiertage / lange Wochenenden** 
 → Diese Frage nutzt `find_common_free_window`, `compare_school_holidays` und `list_school_types` in einer einzigen Konversation und beantwortet eine Frage, die sich in der interkantonalen Koordination jedes Planungsjahr wiederholt.
 → [Weitere Anwendungsbeispiele nach Zielgruppe](EXAMPLES.md) →
 
+### Demo
+
+![Demo: Claude nutzt find_common_free_window und compare_school_holidays](docs/assets/demo.svg)
+
 ---
 
 ## Funktionen
@@ -369,7 +373,7 @@ ruff check src/ tests/
 
 ---
 
-## Contributing
+## Mitwirken
 
 Beiträge sind willkommen! Lies bitte [CONTRIBUTING.de.md](CONTRIBUTING.de.md) (Deutsch) · [CONTRIBUTING.md](CONTRIBUTING.md) (Englisch) für Hinweise zu Fehlermeldungen, Einrichtung der Entwicklungsumgebung, Code-Stil und Test-Anforderungen.
 

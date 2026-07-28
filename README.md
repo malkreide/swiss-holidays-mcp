@@ -29,6 +29,10 @@ The server covers two thematic clusters: **public holidays / long weekends** and
 → This exercises `find_common_free_window`, `compare_school_holidays` and `list_school_types` in a single conversation, and answers a question that recurs every planning cycle in inter-cantonal coordination.
 → [More use cases by audience](EXAMPLES.md) →
 
+### Demo
+
+![Demo: Claude using find_common_free_window and compare_school_holidays](docs/assets/demo.svg)
+
 ---
 
 ## Features
