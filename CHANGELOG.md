@@ -3,6 +3,33 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- **Migrated to the `mcp` Python SDK 2.x** (`mcp>=2.0.0,<3`, was `>=1.28.1,<2`).
+  The floor is hard: the server API moved from `mcp.server.fastmcp` to
+  `mcp.server.mcpserver` (`FastMCP` is now `MCPServer`) with no compatibility
+  shim, so the package cannot import under 1.x.
+- **Transport configuration is per-app, not per-server (SEC-005, SDK-004).**
+  `MCPServer.settings` no longer carries `host`, `port` or
+  `transport_security`; `_build_http_app` passes the Host/Origin allow-list to
+  `streamable_http_app()` / `sse_app()` directly. Pydantic rejects assignment to
+  an undefined field, so the old `mcp.settings.transport_security = ...` form
+  now raises `ValueError` rather than failing quietly — but only once the HTTP
+  path actually runs, which nothing in the suite asserted.
+
+### Added
+
+- **`tests/test_transport_security.py` — inbound Host pinning is now asserted.**
+  The pre-existing suite never checked that the SEC-005 allow-list was *active*:
+  the CORS tests pass with or without it. The gap is subtle, because dropping
+  `transport_security` makes the SDK auto-enable its own localhost default,
+  which still rejects an obviously foreign Host. The load-bearing case is a
+  right-hostname/wrong-port Host — allowed by the SDK fallback (`127.0.0.1:*`),
+  refused by the configured allow-list. Verified by mutation: removing
+  `transport_security` fails that test and only that test.
+
 ## [0.6.0] — 2026-07-24
 
 Audit-hardening release. Closes all 10 findings from the `mcp-audit` run
