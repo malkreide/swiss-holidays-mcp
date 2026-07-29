@@ -131,7 +131,7 @@ This server uses **Architecture A (live API only, with in-memory cache)**.
 ```
                     ┌──────────────────────────┐
    Claude / any ───▶│  swiss-holidays-mcp      │
-   MCP host         │  (FastMCP · 13 tools)    │
+   MCP host         │  (MCPServer · 13 tools)  │
                     └────────┬─────────────────┘
                              │  retry 2s/4s/8s · 12h cache
                     ┌────────┴─────────┐
@@ -238,7 +238,7 @@ For use via **claude.ai in the browser** (e.g. on managed workstations without l
 MCP_TRANSPORT=sse PORT=8000 python -m swiss_holidays_mcp
 ```
 
-FastMCP exposes SSE at `/sse`, not `/mcp`.
+The SDK exposes SSE at `/sse`, not `/mcp`.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -268,7 +268,7 @@ swiss-holidays-mcp/
 │   └── swiss_holidays_mcp/
 │       ├── __init__.py       # Package init
 │       ├── __main__.py       # Entry point: stdio / SSE / Streamable HTTP
-│       ├── server.py         # FastMCP server: lifespan, 13 tools, 1 resource, op_* logic
+│       ├── server.py         # MCPServer: lifespan, 13 tools, 1 resource, op_* logic
 │       ├── client.py         # Shared HTTP client: retry, 12h cache, egress guard
 │       ├── guard.py          # Egress / SSRF guard (HTTPS + allow-list + IP blocklist)
 │       ├── pinning.py        # DNS-pinning transport (TOCTOU-free connect, SEC-005)
@@ -335,7 +335,7 @@ separate city data source is required for them.
   workflows, so **Prompts** are not used (revisited if that changes).
 - **MCP protocol version.** Built and tested against protocol version
   `2025-06-18` (pinned as `MCP_PROTOCOL_VERSION` and surfaced by `source_status`).
-  The wire version is negotiated by the pinned `mcp` SDK (`mcp>=1.2.0,<2`).
+  The wire version is negotiated by the pinned `mcp` SDK (`mcp>=2.0.0,<3`).
 - **Update policy.** SDK and dependency bumps land via Dependabot (weekly);
   protocol-version or tool-definition changes are recorded in
   [`CHANGELOG.md`](CHANGELOG.md) with a version bump.

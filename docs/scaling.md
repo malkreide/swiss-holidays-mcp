@@ -77,7 +77,7 @@ are reclaimed.
 
 ## If you would rather not pin sessions
 
-A future option is FastMCP's stateless HTTP mode (`stateless_http=True`), which
+A future option is the SDK's stateless HTTP mode (`stateless_http=True`), which
 serves each request independently and removes the affinity requirement — at the
 cost of server-initiated streaming. It is **not** enabled today; this server
 ships the stateful transport. Track this in the roadmap before enabling it, as

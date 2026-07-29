@@ -52,14 +52,24 @@ def _build_http_app(settings: Settings) -> Starlette:
     middleware, so the HTTP path constructs the app here, attaches an explicit
     (never wildcard) CORS layer that exposes ``Mcp-Session-Id``, and is served by
     ``main`` via uvicorn.
+
+    Since mcp 2.x these are per-app kwargs: ``MCPServer.settings`` no longer
+    carries ``host``/``port``/``transport_security``, and assigning them would
+    be a silent no-op — which for ``transport_security`` would quietly drop the
+    SEC-005 DNS-rebinding allow-list and fall back to the SDK's localhost
+    default. ``port`` is not needed here at all; uvicorn already gets it in
+    ``main``. ``host`` is passed so that removing the explicit security below
+    would still bind the SDK's own localhost protection rather than silently
+    trusting ``127.0.0.1``.
     """
     from starlette.middleware.cors import CORSMiddleware
 
-    mcp.settings.host = settings.host
-    mcp.settings.port = settings.port
-    mcp.settings.transport_security = _http_security(settings)
-
-    app = mcp.sse_app() if settings.transport.lower() == "sse" else mcp.streamable_http_app()
+    security = _http_security(settings)
+    app = (
+        mcp.sse_app(transport_security=security, host=settings.host)
+        if settings.transport.lower() == "sse"
+        else mcp.streamable_http_app(transport_security=security, host=settings.host)
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,

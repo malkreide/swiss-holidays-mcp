@@ -2,7 +2,7 @@
 
 Architecture (audit SDK-001, ARCH-004): a single shared ``HolidayClient`` --
 holding one ``httpx.AsyncClient`` and a persistent 12h cache -- is created in the
-FastMCP lifespan and injected into every tool via ``Context``. The tool
+MCPServer lifespan and injected into every tool via ``Context``. The tool
 functions are thin wrappers over transport-agnostic ``op_*`` operations, which
 keeps them testable without a live transport.
 
@@ -23,7 +23,7 @@ from functools import wraps
 from itertools import combinations
 from typing import Annotated, Any
 
-from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.mcpserver import Context, MCPServer
 from pydantic import Field
 
 from .client import (
@@ -77,7 +77,7 @@ class AppState:
 
 
 @asynccontextmanager
-async def lifespan(_server: FastMCP) -> AsyncIterator[AppState]:
+async def lifespan(_server: MCPServer) -> AsyncIterator[AppState]:
     """Create one HTTP client + cache for the whole server lifetime (SDK-001)."""
     http = build_http_client()
     try:
@@ -86,7 +86,7 @@ async def lifespan(_server: FastMCP) -> AsyncIterator[AppState]:
         await http.aclose()
 
 
-mcp = FastMCP("swiss-holidays-mcp", lifespan=lifespan)
+mcp = MCPServer("swiss-holidays-mcp", lifespan=lifespan)
 
 _OH = ATTRIBUTIONS["openholidays"]
 _NG = ATTRIBUTIONS["nager"]
@@ -114,7 +114,7 @@ Include = Annotated[str, Field(pattern=r"^(?i:all|public|school)$")]
 def _safe_tool(fn):
     """Mask unexpected internal errors before they reach the model (audit OBS-002).
 
-    This SDK version has no ``mask_error_details`` flag: FastMCP surfaces any
+    This SDK version has no ``mask_error_details`` flag: MCPServer surfaces any
     exception raised inside a tool to the client as the text of an ``isError``
     result. Deliberate ``ValueError`` messages (input validation, e.g. an
     unknown canton) are user-safe and pass through unchanged; every other
