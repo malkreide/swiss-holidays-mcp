@@ -5,6 +5,50 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The retry had six defects, all inherited from the shared template.** This
+  server copied its retry from `reference/retry_backoff.py` in
+  [mcp-data-source-probe-skill](https://github.com/malkreide/mcp-data-source-probe-skill),
+  and the template shipped these until 2026-08-07. A sweep across eleven
+  servers found that none read `Retry-After` and none jittered — one template,
+  eleven copies, not eleven independent omissions.
+  1. **No jitter.** The ladder was deterministic, so every client that hit the
+     same outage retried in lockstep and the load returned as a wave exactly
+     when the source recovered — the retry storm extending the outage it was
+     meant to bridge. Now spread into `[0.5x, 1.5x]`.
+  2. **`Retry-After` was never read.** A 429 or 503 answers the very question
+     the backoff curve guesses at. Both RFC 9110 §10.2.3 forms are now read
+     (delta-seconds and HTTP-date); an unparseable header yields `None` and
+     falls back to the curve — it must never crash on the error path. The
+     jitter on top is one-sided `[1.0x, 1.25x]`: the source said *when*, so
+     later is polite and earlier ignores the value just read.
+  3. **No cap on a single wait**, and the cap now binds *after* the jitter.
+     `min(cap, base) * jitter` and `min(cap, base * jitter)` both contain a cap
+     and a jitter; only the second is bounded — 20s times 1.5 is 30s.
+  4. **The budget counted attempts, not seconds.** Four attempts against an
+     upstream that takes 30s to time out is two minutes inside one tool call,
+     and an attempt count never says so. Now 25s for the whole call, anchored
+     on the MCP SDK's `MCP_DEFAULT_TIMEOUT = 30.0`.
+  5. **Nothing held that budget.** It is now an `asyncio.timeout` wall-clock
+     deadline rather than an httpx timeout: httpx bounds each *operation*, and
+     its read timeout restarts with every chunk, so a slowly trickling response
+     outlived the budget without any single read expiring.
+  6. **Point six did not apply here, and that is worth saying.** The final
+     message is deliberately generic (OBS-002) and the log line already carried
+     `type(last_error).__name__` rather than `str(last_error)` — so this server
+     never had the empty-`str()` problem that the sibling servers did. The log
+     now also names the host and which of the two limits ran out; the message
+     stays generic.
+
+  `asyncio.wait_for` rather than `asyncio.timeout`, because this package
+  supports Python 3.10 (`requires-python = ">=3.10"`) and `asyncio.timeout`
+  needs 3.11. Verified against 3.10 locally.
+
+  New `tests/test_retry_policy.py`: `Retry-After` in both forms plus the
+  refusal cases, the jitter spread, that the cap binds after jittering, and the
+  one-sided `Retry-After` jitter.
+
 ### Changed
 
 - **Migrated to the `mcp` Python SDK 2.x** (`mcp>=2.0.0,<3`, was `>=1.28.1,<2`).
