@@ -1,0 +1,161 @@
+"""Jeder externe Endpunkt, gefahren aus einer aufgezeichneten Antwort.
+
+Die handgeschriebenen Stubs im Rest der Suite pruefen die *Fehler*-Pfade — ein
+404, ein Timeout, ein leerer Bestand —, die sich nicht auf Zuruf aufzeichnen
+lassen und als Erfindung in Ordnung sind. Was sie nicht koennen: die Form einer
+Erfolgs-Antwort belegen. Sie stimmen mit dem ueberein, was ihr Autor annahm.
+Diese Tests spielen echte Antworten ab, damit ein umbenanntes Feld hier
+auffaellt statt in Produktion.
+
+Herkunft, Datum, Auswahlregel und SHA-256 je Datei stehen in
+`tests/fixtures/PROVENANCE.md`; neu aufzeichnen mit
+`python scripts/record_fixtures.py`.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import re
+
+import httpx
+import pytest
+import respx
+from fixture_data import fixture_json, provenance, recorded_names
+
+from swiss_holidays_mcp.constants import NAGER_BASE, OPENHOLIDAYS_BASE
+
+# Jeder externe Endpunkt dieses Servers und die Fixture dazu. Ein Endpunkt ohne
+# Aufzeichnung faellt in `test_jeder_endpunkt_hat_eine_aufzeichnung`.
+ENDPOINTS = {
+    f"{OPENHOLIDAYS_BASE}/Subdivisions": "subdivisions.json",
+    f"{OPENHOLIDAYS_BASE}/Groups": "groups.json",
+    f"{OPENHOLIDAYS_BASE}/PublicHolidays": "public_holidays.json",
+    f"{OPENHOLIDAYS_BASE}/SchoolHolidays": "school_holidays.json",
+    f"{OPENHOLIDAYS_BASE}/Countries": "countries.json",
+    f"{NAGER_BASE}/LongWeekend": "long_weekends.json",
+    f"{NAGER_BASE}/AvailableCountries": "available_countries.json",
+}
+
+JAHR = 2026
+KANTON = "CH-ZH"
+
+
+def mount(url: str, name: str) -> None:
+    """Serviert Fixture `name` unter `url`. Aufgezeichnet wurde durchweg 200."""
+    respx.get(url).mock(return_value=httpx.Response(200, json=fixture_json(name)))
+
+
+# --------------------------------------------------------------------------
+# Herkunft
+# --------------------------------------------------------------------------
+
+
+def test_provenance_nennt_ein_brauchbares_aufnahmedatum():
+    """Eine Aufzeichnung ohne Datum ist eine undatierte Behauptung ueber die Quelle."""
+    match = re.search(r"Aufgezeichnet am \*\*(\d{4}-\d{2}-\d{2})\*\*", provenance())
+    assert match, "PROVENANCE.md nennt kein Aufnahmedatum im erwarteten Format"
+    when = dt.date.fromisoformat(match.group(1))
+    assert when <= dt.datetime.now(dt.timezone.utc).date(), "Aufnahmedatum liegt in der Zukunft"
+
+
+def test_jede_fixture_steht_in_der_provenance():
+    """Sonst waechst der Ordner und der Nachweis bleibt zurueck."""
+    text = provenance()
+    fehlend = [n for n in recorded_names() if f"## `{n}`" not in text]
+    assert not fehlend, f"ohne Eintrag in PROVENANCE.md: {fehlend}"
+
+
+def test_jeder_endpunkt_hat_eine_aufzeichnung():
+    """Bewacht die Regel selbst: eine aufgezeichnete Antwort je externem Endpunkt."""
+    fehlend = sorted(set(ENDPOINTS.values()) - set(recorded_names()))
+    assert not fehlend, f"Endpunkte ohne Aufzeichnung: {fehlend}"
+
+
+@pytest.mark.parametrize("name", sorted(ENDPOINTS.values()))
+def test_jede_aufzeichnung_ist_nicht_leer(name):
+    """Eine leere Aufzeichnung sieht aus wie eine gueltige und prueft nichts."""
+    assert fixture_json(name), f"{name} ist leer — neu aufzeichnen"
+
+
+# --------------------------------------------------------------------------
+# OpenHolidays
+# --------------------------------------------------------------------------
+
+
+@respx.mock
+async def test_public_holidays_aus_der_aufzeichnung(client):
+    rows = fixture_json("public_holidays.json")
+    mount(f"{OPENHOLIDAYS_BASE}/PublicHolidays", "public_holidays.json")
+    payload, quelle, _ = await client.public_holidays(
+        f"{JAHR}-01-01", f"{JAHR}-12-31", "DE", KANTON
+    )
+    assert len(payload) == len(rows)
+    assert quelle == "live_api"
+    # Die Feldnamen der Quelle, nicht die erwarteten. `name` ist eine Liste von
+    # Sprachobjekten, kein String — genau die Art Annahme, die ein Stub festschreibt.
+    assert all(h["startDate"] for h in payload)
+    assert all(isinstance(h["name"], list) and h["name"] for h in payload)
+    assert all(h["name"][0]["language"] for h in payload)
+
+
+@respx.mock
+async def test_school_holidays_aus_der_aufzeichnung(client):
+    rows = fixture_json("school_holidays.json")
+    mount(f"{OPENHOLIDAYS_BASE}/SchoolHolidays", "school_holidays.json")
+    payload, _, _ = await client.school_holidays(f"{JAHR}-01-01", f"{JAHR}-12-31", "DE", KANTON)
+    assert len(payload) == len(rows)
+    assert all(h["startDate"] and h["endDate"] for h in payload)
+    assert all(h["startDate"] <= h["endDate"] for h in payload), "Ferien enden nicht vor Beginn"
+
+
+@respx.mock
+async def test_subdivisions_aus_der_aufzeichnung(client):
+    """Die Aufzeichnung deckt drei Formen ab: tief verschachtelt, flach, ohne `children`."""
+    rows = fixture_json("subdivisions.json")
+    mount(f"{OPENHOLIDAYS_BASE}/Subdivisions", "subdivisions.json")
+    payload, _, _ = await client.subdivisions("DE")
+    assert len(payload) == len(rows)
+    codes = {s["code"] for s in payload}
+    assert "CH-ZH" in codes
+    kinderzahl = sorted(len(s.get("children") or []) for s in payload)
+    assert kinderzahl[0] == 0, "ein Kanton ohne Untereinheiten gehoert dazu"
+    assert kinderzahl[-1] > 0, "ein tief verschachtelter Kanton gehoert dazu"
+
+
+@respx.mock
+async def test_groups_aus_der_aufzeichnung(client):
+    rows = fixture_json("groups.json")
+    mount(f"{OPENHOLIDAYS_BASE}/Groups", "groups.json")
+    payload, _, _ = await client.groups("DE")
+    assert len(payload) == len(rows)
+    assert all(g.get("code") for g in payload)
+
+
+# --------------------------------------------------------------------------
+# Nager.Date
+# --------------------------------------------------------------------------
+
+
+@respx.mock
+async def test_long_weekends_aus_der_aufzeichnung(client):
+    rows = fixture_json("long_weekends.json")
+    mount(f"{NAGER_BASE}/LongWeekend/{JAHR}/CH", "long_weekends.json")
+    payload, _, _ = await client.long_weekends(JAHR)
+    assert len(payload) == len(rows)
+    assert all(w["startDate"] and w["endDate"] for w in payload)
+    assert all(w["dayCount"] >= 3 for w in payload), "ein langes Wochenende hat mindestens 3 Tage"
+
+
+def test_die_beiden_quellen_benennen_ihre_felder_verschieden():
+    """Haelt einen Unterschied fest, den nur eine Aufzeichnung zeigen kann.
+
+    OpenHolidays fuehrt `name` als Liste von Sprachobjekten, Nager.Date kennt
+    dieses Feld gar nicht und liefert `dayCount`. Ein handgeschriebener Stub
+    haette beide Quellen leicht gleich geformt — und der Unterschied waere erst
+    produktiv aufgefallen.
+    """
+    feiertag = fixture_json("public_holidays.json")[0]
+    wochenende = fixture_json("long_weekends.json")[0]
+    assert isinstance(feiertag["name"], list)
+    assert "name" not in wochenende
+    assert "dayCount" in wochenende

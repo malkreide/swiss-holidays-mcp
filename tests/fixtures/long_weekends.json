@@ -1,0 +1,27 @@
+[
+  {
+    "startDate": "2026-01-01",
+    "endDate": "2026-01-04",
+    "dayCount": 4,
+    "needBridgeDay": true,
+    "bridgeDays": [
+      "2026-01-02"
+    ]
+  },
+  {
+    "startDate": "2026-05-14",
+    "endDate": "2026-05-17",
+    "dayCount": 4,
+    "needBridgeDay": true,
+    "bridgeDays": [
+      "2026-05-15"
+    ]
+  },
+  {
+    "startDate": "2026-12-25",
+    "endDate": "2026-12-27",
+    "dayCount": 3,
+    "needBridgeDay": false,
+    "bridgeDays": []
+  }
+]

@@ -1,0 +1,336 @@
+[
+  {
+    "code": "CH-AI-VS",
+    "shortName": "AI-VS",
+    "category": [
+      {
+        "language": "DE",
+        "text": "Schulart"
+      }
+    ],
+    "name": [
+      {
+        "language": "DE",
+        "text": "Volksschulen"
+      }
+    ],
+    "subdivisions": [
+      {
+        "code": "CH-AI",
+        "shortName": "AI"
+      },
+      {
+        "code": "CH-AI-AP",
+        "shortName": "AI-AP"
+      },
+      {
+        "code": "CH-AI-SH",
+        "shortName": "AI-SH"
+      },
+      {
+        "code": "CH-AI-GO",
+        "shortName": "AI-GO"
+      },
+      {
+        "code": "CH-AI-SR",
+        "shortName": "AI-SR"
+      },
+      {
+        "code": "CH-AI-OB",
+        "shortName": "AI-OB"
+      }
+    ]
+  },
+  {
+    "code": "CH-AR-VS",
+    "shortName": "AR-VS",
+    "category": [
+      {
+        "language": "DE",
+        "text": "Schulart"
+      }
+    ],
+    "name": [
+      {
+        "language": "DE",
+        "text": "Volksschulen"
+      }
+    ],
+    "subdivisions": [
+      {
+        "code": "CH-AR-HL-UR",
+        "shortName": "AR-HL-UR"
+      },
+      {
+        "code": "CH-AR-VL-LU",
+        "shortName": "AR-VL-LU"
+      },
+      {
+        "code": "CH-AR-HL-HU",
+        "shortName": "AR-HL-HU"
+      },
+      {
+        "code": "CH-AR-ML-TE",
+        "shortName": "AR-ML-TE"
+      },
+      {
+        "code": "CH-AR-VL-GR",
+        "shortName": "AR-VL-GR"
+      },
+      {
+        "code": "CH-AR-HL-HE",
+        "shortName": "AR-HL-HE"
+      },
+      {
+        "code": "CH-AR-HL-SW",
+        "shortName": "AR-HL-SW"
+      },
+      {
+        "code": "CH-AR-ML-GA",
+        "shortName": "AR-ML-GA"
+      },
+      {
+        "code": "CH-AR-HL",
+        "shortName": "AR-HL"
+      },
+      {
+        "code": "CH-AR-ML-BU",
+        "shortName": "AR-ML-BU"
+      },
+      {
+        "code": "CH-AR",
+        "shortName": "AR"
+      },
+      {
+        "code": "CH-AR-ML-TR",
+        "shortName": "AR-ML-TR"
+      },
+      {
+        "code": "CH-AR-ML",
+        "shortName": "AR-ML"
+      },
+      {
+        "code": "CH-AR-ML-SP",
+        "shortName": "AR-ML-SP"
+      },
+      {
+        "code": "CH-AR-VL-WA",
+        "shortName": "AR-VL-WA"
+      },
+      {
+        "code": "CH-AR-HL-ST",
+        "shortName": "AR-HL-ST"
+      },
+      {
+        "code": "CH-AR-HL-WA",
+        "shortName": "AR-HL-WA"
+      },
+      {
+        "code": "CH-AR-VL-HE",
+        "shortName": "AR-VL-HE"
+      },
+      {
+        "code": "CH-AR-VL-RE",
+        "shortName": "AR-VL-RE"
+      },
+      {
+        "code": "CH-AR-VL",
+        "shortName": "AR-VL"
+      },
+      {
+        "code": "CH-AR-VL-WO",
+        "shortName": "AR-VL-WO"
+      },
+      {
+        "code": "CH-AR-HL-SO",
+        "shortName": "AR-HL-SO"
+      },
+      {
+        "code": "CH-AR-VL-RT",
+        "shortName": "AR-VL-RT"
+      },
+      {
+        "code": "CH-AR-VL-WZ",
+        "shortName": "AR-VL-WZ"
+      }
+    ]
+  },
+  {
+    "code": "CH-BE-EO",
+    "shortName": "BE-EO",
+    "category": [
+      {
+        "language": "DE",
+        "text": "Schulart"
+      }
+    ],
+    "name": [
+      {
+        "language": "DE",
+        "text": "Obligatorische Schulen"
+      }
+    ],
+    "subdivisions": [
+      {
+        "code": "CH-BE-JB-PD",
+        "shortName": "BE-JB-PD"
+      },
+      {
+        "code": "CH-BE-JB-LO",
+        "shortName": "BE-JB-LO"
+      },
+      {
+        "code": "CH-BE-JB-LN",
+        "shortName": "BE-JB-LN"
+      },
+      {
+        "code": "CH-BE-JB-PH",
+        "shortName": "BE-JB-PH"
+      },
+      {
+        "code": "CH-BE-JB-VA",
+        "shortName": "BE-JB-VA"
+      },
+      {
+        "code": "CH-BE-JB-MT",
+        "shortName": "BE-JB-MT"
+      },
+      {
+        "code": "CH-BE-JB-CR",
+        "shortName": "BE-JB-CR"
+      },
+      {
+        "code": "CH-BE-JB-TA",
+        "shortName": "BE-JB-TA"
+      },
+      {
+        "code": "CH-BE-JB-VI",
+        "shortName": "BE-JB-VI"
+      },
+      {
+        "code": "CH-BE-JB-ES",
+        "shortName": "BE-JB-ES"
+      },
+      {
+        "code": "CH-BE-JB-PV",
+        "shortName": "BE-JB-PV"
+      },
+      {
+        "code": "CH-BE-JB",
+        "shortName": "BE-JB"
+      },
+      {
+        "code": "CH-BE-JB-RM",
+        "shortName": "BE-JB-RM"
+      },
+      {
+        "code": "CH-BE-JB-SA",
+        "shortName": "BE-JB-SA"
+      },
+      {
+        "code": "CH-BE-JB-MO",
+        "shortName": "BE-JB-MO"
+      },
+      {
+        "code": "CH-BE-JB-SC",
+        "shortName": "BE-JB-SC"
+      },
+      {
+        "code": "CH-BE-JB-LF",
+        "shortName": "BE-JB-LF"
+      },
+      {
+        "code": "CH-BE-JB-RN",
+        "shortName": "BE-JB-RN"
+      },
+      {
+        "code": "CH-BE-JB-TR",
+        "shortName": "BE-JB-TR"
+      },
+      {
+        "code": "CH-BE-JB-CO",
+        "shortName": "BE-JB-CO"
+      },
+      {
+        "code": "CH-BE-JB-RO",
+        "shortName": "BE-JB-RO"
+      },
+      {
+        "code": "CH-BE-JB-CB",
+        "shortName": "BE-JB-CB"
+      },
+      {
+        "code": "CH-BE-JB-BE",
+        "shortName": "BE-JB-BE"
+      },
+      {
+        "code": "CH-BE-JB-PE",
+        "shortName": "BE-JB-PE"
+      },
+      {
+        "code": "CH-BE-JB-SN",
+        "shortName": "BE-JB-SN"
+      },
+      {
+        "code": "CH-BE-JB-RV",
+        "shortName": "BE-JB-RV"
+      },
+      {
+        "code": "CH-BE-JB-NO",
+        "shortName": "BE-JB-NO"
+      },
+      {
+        "code": "CH-BE-JB-RE",
+        "shortName": "BE-JB-RE"
+      },
+      {
+        "code": "CH-BE-JB-CG",
+        "shortName": "BE-JB-CG"
+      },
+      {
+        "code": "CH-BE-JB-GR",
+        "shortName": "BE-JB-GR"
+      },
+      {
+        "code": "CH-BE",
+        "shortName": "BE"
+      },
+      {
+        "code": "CH-BE-JB-CC",
+        "shortName": "BE-JB-CC"
+      },
+      {
+        "code": "CH-BE-JB-SL",
+        "shortName": "BE-JB-SL"
+      },
+      {
+        "code": "CH-BE-JB-SR",
+        "shortName": "BE-JB-SR"
+      },
+      {
+        "code": "CH-BE-JB-SS",
+        "shortName": "BE-JB-SS"
+      },
+      {
+        "code": "CH-BE-JB-CM",
+        "shortName": "BE-JB-CM"
+      },
+      {
+        "code": "CH-BE-JB-CL",
+        "shortName": "BE-JB-CL"
+      },
+      {
+        "code": "CH-BE-JB-OR",
+        "shortName": "BE-JB-OR"
+      },
+      {
+        "code": "CH-BE-JB-CH",
+        "shortName": "BE-JB-CH"
+      },
+      {
+        "code": "CH-BE-JB-SI",
+        "shortName": "BE-JB-SI"
+      }
+    ]
+  }
+]
