@@ -5,6 +5,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Aufgezeichnete Fixtures, eine je externem Endpunkt, mit Nachweis.**
+  `tests/fixtures/` haelt jetzt echte Antworten fuer alle sieben Endpunkte der
+  beiden Quellen — `/Subdivisions`, `/Groups`, `/PublicHolidays`,
+  `/SchoolHolidays` und `/Countries` bei OpenHolidays, `/LongWeekend` und
+  `/AvailableCountries` bei Nager.Date. Herkunft, Datum, Auswahlregel und
+  SHA-256 stehen je Datei in `tests/fixtures/PROVENANCE.md`, wie im uebrigen
+  Portfolio; geladen wird ueber `tests/fixture_data.py`.
+
+  Festes Jahr (2026) und fester Kanton (CH-ZH) mit Absicht: eine Auswahl, die
+  vom Zeitpunkt des Laufs abhinge, erzeugte bei jedem Aufzeichnen einen anderen
+  Diff. `/Subdivisions` ist auf drei Kantone gekuerzt — ZH tief verschachtelt,
+  BS flach, AR ganz ohne `children` —, weil der Vollabzug 399 kB waere; kein
+  Feld innerhalb der Datensaetze wurde entfernt.
+
+  Gegenprobe, jede Zusicherung einzeln neutralisiert: Aufnahmedatum entfernt ->
+  Datums-Check faellt; Fixture ohne PROVENANCE-Eintrag -> Vollstaendigkeits-Check
+  faellt; Aufzeichnung geloescht -> Abdeckungs-Waechter faellt; `name` als String
+  statt Sprachliste -> zwei Tests fallen; nur den verschachtelten Kanton
+  behalten -> der Subdivisions-Test faellt.
+
 ### Fixed
 
 - **The retry had six defects, all inherited from the shared template.** This

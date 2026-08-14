@@ -1,0 +1,3430 @@
+[
+  {
+    "code": "CH-AR",
+    "isoCode": "CH-AR",
+    "shortName": "AR",
+    "category": [
+      {
+        "language": "DE",
+        "text": "Kanton"
+      }
+    ],
+    "name": [
+      {
+        "language": "DE",
+        "text": "Appenzell Ausserrhoden"
+      }
+    ],
+    "officialLanguages": [
+      "DE"
+    ],
+    "groups": [
+      {
+        "code": "CH-AR-VS",
+        "shortName": "AR-VS"
+      }
+    ]
+  },
+  {
+    "code": "CH-BS",
+    "isoCode": "CH-BS",
+    "shortName": "BS",
+    "category": [
+      {
+        "language": "DE",
+        "text": "Kanton"
+      }
+    ],
+    "name": [
+      {
+        "language": "DE",
+        "text": "Basel-Stadt"
+      }
+    ],
+    "officialLanguages": [
+      "DE"
+    ],
+    "children": [
+      {
+        "code": "CH-BS-BS",
+        "isoCode": "",
+        "shortName": "BS-BS",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Gemeinde"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Basel"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ]
+      },
+      {
+        "code": "CH-BS-RI",
+        "isoCode": "",
+        "shortName": "BS-RI",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Gemeinde"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Riehen"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ]
+      },
+      {
+        "code": "CH-BS-BT",
+        "isoCode": "",
+        "shortName": "BS-BT",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Gemeinde"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Bettingen"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ]
+      }
+    ]
+  },
+  {
+    "code": "CH-ZH",
+    "isoCode": "CH-ZH",
+    "shortName": "ZH",
+    "category": [
+      {
+        "language": "DE",
+        "text": "Kanton"
+      }
+    ],
+    "name": [
+      {
+        "language": "DE",
+        "text": "Zürich"
+      }
+    ],
+    "officialLanguages": [
+      "DE"
+    ],
+    "groups": [
+      {
+        "code": "CH-ZH-VS",
+        "shortName": "ZH-VS"
+      },
+      {
+        "code": "CH-ZH-BS",
+        "shortName": "ZH-BS"
+      },
+      {
+        "code": "CH-ZH-MS",
+        "shortName": "ZH-MS"
+      }
+    ],
+    "children": [
+      {
+        "code": "CH-ZH-BU",
+        "isoCode": "",
+        "shortName": "ZH-BU",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Bezirk"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Bülach"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ],
+        "children": [
+          {
+            "code": "CH-ZH-BU-NU",
+            "isoCode": "",
+            "shortName": "ZH-BU-NU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Nürensdorf"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-OB",
+            "isoCode": "",
+            "shortName": "ZH-BU-OB",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Oberembrach"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-WS",
+            "isoCode": "",
+            "shortName": "ZH-BU-WS",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Wallisellen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-WN",
+            "isoCode": "",
+            "shortName": "ZH-BU-WN",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Winkel"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-WK",
+            "isoCode": "",
+            "shortName": "ZH-BU-WK",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Wasterkingen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-WI",
+            "isoCode": "",
+            "shortName": "ZH-BU-WI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Wil (ZH)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-RO",
+            "isoCode": "",
+            "shortName": "ZH-BU-RO",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Rorbas"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-RA",
+            "isoCode": "",
+            "shortName": "ZH-BU-RA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Rafz"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-OP",
+            "isoCode": "",
+            "shortName": "ZH-BU-OP",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Opfikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-BB",
+            "isoCode": "",
+            "shortName": "ZH-BU-BB",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Bachenbülach"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-BD",
+            "isoCode": "",
+            "shortName": "ZH-BU-BD",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Bassersdorf"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-BU",
+            "isoCode": "",
+            "shortName": "ZH-BU-BU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Bülach"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-DI",
+            "isoCode": "",
+            "shortName": "ZH-BU-DI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Dietlikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-EG",
+            "isoCode": "",
+            "shortName": "ZH-BU-EG",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Eglisau"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-EM",
+            "isoCode": "",
+            "shortName": "ZH-BU-EM",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Embrach"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-FT",
+            "isoCode": "",
+            "shortName": "ZH-BU-FT",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Freienstein-Teufen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-GL",
+            "isoCode": "",
+            "shortName": "ZH-BU-GL",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Glattfelden"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-HF",
+            "isoCode": "",
+            "shortName": "ZH-BU-HF",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Hochfelden"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-HO",
+            "isoCode": "",
+            "shortName": "ZH-BU-HO",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Höri"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-HU",
+            "isoCode": "",
+            "shortName": "ZH-BU-HU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Hüntwangen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-KL",
+            "isoCode": "",
+            "shortName": "ZH-BU-KL",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Kloten"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-BU-LU",
+            "isoCode": "",
+            "shortName": "ZH-BU-LU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Lufingen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "CH-ZH-DT",
+        "isoCode": "",
+        "shortName": "ZH-DT",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Bezirk"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Dietikon"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ],
+        "children": [
+          {
+            "code": "CH-ZH-DT-UI",
+            "isoCode": "",
+            "shortName": "ZH-DT-UI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Uitikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DT-SL",
+            "isoCode": "",
+            "shortName": "ZH-DT-SL",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Schlieren"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DT-OE",
+            "isoCode": "",
+            "shortName": "ZH-DT-OE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Oetwil an der Limmat"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DT-OB",
+            "isoCode": "",
+            "shortName": "ZH-DT-OB",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Oberengstringen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DT-GE",
+            "isoCode": "",
+            "shortName": "ZH-DT-GE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Geroldswil"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DT-WE",
+            "isoCode": "",
+            "shortName": "ZH-DT-WE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Weiningen (ZH)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DT-DI",
+            "isoCode": "",
+            "shortName": "ZH-DT-DI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Dietikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DT-BI",
+            "isoCode": "",
+            "shortName": "ZH-DT-BI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Birmensdorf (ZH)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DT-UR",
+            "isoCode": "",
+            "shortName": "ZH-DT-UR",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Urdorf"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DT-UN",
+            "isoCode": "",
+            "shortName": "ZH-DT-UN",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Unterengstringen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "CH-ZH-AT",
+        "isoCode": "",
+        "shortName": "ZH-AT",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Bezirk"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Affoltern"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ],
+        "children": [
+          {
+            "code": "CH-ZH-AT-AE",
+            "isoCode": "",
+            "shortName": "ZH-AT-AE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Aeugst am Albis"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AT-AF",
+            "isoCode": "",
+            "shortName": "ZH-AT-AF",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Affoltern am Albis"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AT-BO",
+            "isoCode": "",
+            "shortName": "ZH-AT-BO",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Bonstetten"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AT-HE",
+            "isoCode": "",
+            "shortName": "ZH-AT-HE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Hedingen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AT-HA",
+            "isoCode": "",
+            "shortName": "ZH-AT-HA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Hausen am Albis"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AT-KA",
+            "isoCode": "",
+            "shortName": "ZH-AT-KA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Kappel am Albis"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AT-KN",
+            "isoCode": "",
+            "shortName": "ZH-AT-KN",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Knonau"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AT-MA",
+            "isoCode": "",
+            "shortName": "ZH-AT-MA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Maschwanden"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AT-ME",
+            "isoCode": "",
+            "shortName": "ZH-AT-ME",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Mettmenstetten"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AT-OB",
+            "isoCode": "",
+            "shortName": "ZH-AT-OB",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Obfelden"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AT-OT",
+            "isoCode": "",
+            "shortName": "ZH-AT-OT",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Ottenbach"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AT-RI",
+            "isoCode": "",
+            "shortName": "ZH-AT-RI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Rifferswil"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AT-ST",
+            "isoCode": "",
+            "shortName": "ZH-AT-ST",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Stallikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AT-WE",
+            "isoCode": "",
+            "shortName": "ZH-AT-WE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Wettswil am Albis"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "CH-ZH-DD",
+        "isoCode": "",
+        "shortName": "ZH-DD",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Bezirk"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Dielsdorf"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ],
+        "children": [
+          {
+            "code": "CH-ZH-DD-SO",
+            "isoCode": "",
+            "shortName": "ZH-DD-SO",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Schöfflisdorf"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-BA",
+            "isoCode": "",
+            "shortName": "ZH-DD-BA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Bachs"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-BO",
+            "isoCode": "",
+            "shortName": "ZH-DD-BO",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Boppelsen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-BU",
+            "isoCode": "",
+            "shortName": "ZH-DD-BU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Buchs (ZH)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-DI",
+            "isoCode": "",
+            "shortName": "ZH-DD-DI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Dielsdorf"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-DL",
+            "isoCode": "",
+            "shortName": "ZH-DD-DL",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Dällikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-DN",
+            "isoCode": "",
+            "shortName": "ZH-DD-DN",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Dänikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-HU",
+            "isoCode": "",
+            "shortName": "ZH-DD-HU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Hüttikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-NE",
+            "isoCode": "",
+            "shortName": "ZH-DD-NE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Neerach"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-NG",
+            "isoCode": "",
+            "shortName": "ZH-DD-NG",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Niederglatt"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-NH",
+            "isoCode": "",
+            "shortName": "ZH-DD-NH",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Niederhasli"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-NW",
+            "isoCode": "",
+            "shortName": "ZH-DD-NW",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Niederweningen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-OG",
+            "isoCode": "",
+            "shortName": "ZH-DD-OG",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Oberglatt"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-OT",
+            "isoCode": "",
+            "shortName": "ZH-DD-OT",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Otelfingen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-OW",
+            "isoCode": "",
+            "shortName": "ZH-DD-OW",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Oberweningen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-RB",
+            "isoCode": "",
+            "shortName": "ZH-DD-RB",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Regensberg"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-RD",
+            "isoCode": "",
+            "shortName": "ZH-DD-RD",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Regensdorf"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-RU",
+            "isoCode": "",
+            "shortName": "ZH-DD-RU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Rümlang"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-SL",
+            "isoCode": "",
+            "shortName": "ZH-DD-SL",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Schleinikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-SM",
+            "isoCode": "",
+            "shortName": "ZH-DD-SM",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Steinmaur"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-ST",
+            "isoCode": "",
+            "shortName": "ZH-DD-ST",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Stadel"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-DD-WE",
+            "isoCode": "",
+            "shortName": "ZH-DD-WE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Weiach"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "CH-ZH-HW",
+        "isoCode": "",
+        "shortName": "ZH-HW",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Bezirk"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Hinwil"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ],
+        "children": [
+          {
+            "code": "CH-ZH-HW-GR",
+            "isoCode": "",
+            "shortName": "ZH-HW-GR",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Grüningen)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HW-HI",
+            "isoCode": "",
+            "shortName": "ZH-HW-HI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Hinwil)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HW-WE",
+            "isoCode": "",
+            "shortName": "ZH-HW-WE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Wetzikon (ZH)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HW-WA",
+            "isoCode": "",
+            "shortName": "ZH-HW-WA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Wald (ZH))"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HW-SE",
+            "isoCode": "",
+            "shortName": "ZH-HW-SE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Seegräben)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HW-RU",
+            "isoCode": "",
+            "shortName": "ZH-HW-RU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Rüti (ZH))"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HW-BA",
+            "isoCode": "",
+            "shortName": "ZH-HW-BA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Bäretswil)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HW-BU",
+            "isoCode": "",
+            "shortName": "ZH-HW-BU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Bubikon)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HW-DU",
+            "isoCode": "",
+            "shortName": "ZH-HW-DU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Dürnten)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HW-FI",
+            "isoCode": "",
+            "shortName": "ZH-HW-FI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Fischenthal)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HW-GO",
+            "isoCode": "",
+            "shortName": "ZH-HW-GO",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Gossau (ZH))"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "CH-ZH-PF",
+        "isoCode": "",
+        "shortName": "ZH-PF",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Bezirk"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Pfäffikon"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ],
+        "children": [
+          {
+            "code": "CH-ZH-PF-WB",
+            "isoCode": "",
+            "shortName": "ZH-PF-WB",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Wildberg"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-PF-WI",
+            "isoCode": "",
+            "shortName": "ZH-PF-WI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Wila"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-PF-LI",
+            "isoCode": "",
+            "shortName": "ZH-PF-LI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Lindau"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-PF-HI",
+            "isoCode": "",
+            "shortName": "ZH-PF-HI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Hittnau"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-PF-RU",
+            "isoCode": "",
+            "shortName": "ZH-PF-RU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Russikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-PF-FE",
+            "isoCode": "",
+            "shortName": "ZH-PF-FE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Fehraltorf"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-PF-PF",
+            "isoCode": "",
+            "shortName": "ZH-PF-PF",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Pfäffikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-PF-WE",
+            "isoCode": "",
+            "shortName": "ZH-PF-WE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Weisslingen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "CH-ZH-WT",
+        "isoCode": "",
+        "shortName": "ZH-WT",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Bezirk"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Winterthur"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ],
+        "children": [
+          {
+            "code": "CH-ZH-WT-WI",
+            "isoCode": "",
+            "shortName": "ZH-WT-WI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Winterthur"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-TU",
+            "isoCode": "",
+            "shortName": "ZH-WT-TU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Turbenthal"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-SZ",
+            "isoCode": "",
+            "shortName": "ZH-WT-SZ",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Seuzach"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-SL",
+            "isoCode": "",
+            "shortName": "ZH-WT-SL",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Schlatt (ZH)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-RI",
+            "isoCode": "",
+            "shortName": "ZH-WT-RI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Rickenbach (ZH)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-PF",
+            "isoCode": "",
+            "shortName": "ZH-WT-PF",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Pfungen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-NE",
+            "isoCode": "",
+            "shortName": "ZH-WT-NE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Neftenbach"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-HE",
+            "isoCode": "",
+            "shortName": "ZH-WT-HE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Hettlingen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-HA",
+            "isoCode": "",
+            "shortName": "ZH-WT-HA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Hagenbuch"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-ET",
+            "isoCode": "",
+            "shortName": "ZH-WT-ET",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Ellikon an der Thur"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-EL",
+            "isoCode": "",
+            "shortName": "ZH-WT-EL",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Elsau"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-DT",
+            "isoCode": "",
+            "shortName": "ZH-WT-DT",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Dättlikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-ZL",
+            "isoCode": "",
+            "shortName": "ZH-WT-ZL",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Zell (ZH)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-DI",
+            "isoCode": "",
+            "shortName": "ZH-WT-DI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Dinhard"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-DA",
+            "isoCode": "",
+            "shortName": "ZH-WT-DA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Dägerlen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-BR",
+            "isoCode": "",
+            "shortName": "ZH-WT-BR",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Brütten"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-WT-AL",
+            "isoCode": "",
+            "shortName": "ZH-WT-AL",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Altikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "CH-ZH-ZH",
+        "isoCode": "",
+        "shortName": "ZH-ZH",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Bezirk"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Zürich"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ],
+        "children": [
+          {
+            "code": "CH-ZH-ZH-ZH",
+            "isoCode": "",
+            "shortName": "ZH-ZH-ZH",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Zürich"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "CH-ZH-HG",
+        "isoCode": "",
+        "shortName": "ZH-HG",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Bezirk"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Horgen"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ],
+        "children": [
+          {
+            "code": "CH-ZH-HG-KI",
+            "isoCode": "",
+            "shortName": "ZH-HG-KI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Kilchberg (ZH)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HG-AD",
+            "isoCode": "",
+            "shortName": "ZH-HG-AD",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Adliswil"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HG-TH",
+            "isoCode": "",
+            "shortName": "ZH-HG-TH",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Thalwil"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HG-RU",
+            "isoCode": "",
+            "shortName": "ZH-HG-RU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Rüschlikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HG-RI",
+            "isoCode": "",
+            "shortName": "ZH-HG-RI",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Richterswil"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HG-LA",
+            "isoCode": "",
+            "shortName": "ZH-HG-LA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Langnau am Albis"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-HG-OB",
+            "isoCode": "",
+            "shortName": "ZH-HG-OB",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Oberrieden"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "CH-ZH-AF",
+        "isoCode": "",
+        "shortName": "ZH-AF",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Bezirk"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Andelfingen"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ],
+        "children": [
+          {
+            "code": "CH-ZH-AF-DA",
+            "isoCode": "",
+            "shortName": "ZH-AF-DA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Dachsen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-BU",
+            "isoCode": "",
+            "shortName": "ZH-AF-BU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Buch am Irchel"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-BK",
+            "isoCode": "",
+            "shortName": "ZH-AF-BK",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Benken (ZH)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-BE",
+            "isoCode": "",
+            "shortName": "ZH-AF-BE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Berg am Irchel"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-MA",
+            "isoCode": "",
+            "shortName": "ZH-AF-MA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Marthalen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-OS",
+            "isoCode": "",
+            "shortName": "ZH-AF-OS",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Ossingen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-RH",
+            "isoCode": "",
+            "shortName": "ZH-AF-RH",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Rheinau"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-TH",
+            "isoCode": "",
+            "shortName": "ZH-AF-TH",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Thalheim an der Thur"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-TL",
+            "isoCode": "",
+            "shortName": "ZH-AF-TL",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Trüllikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-TT",
+            "isoCode": "",
+            "shortName": "ZH-AF-TT",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Truttikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-VO",
+            "isoCode": "",
+            "shortName": "ZH-AF-VO",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Volken"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-LU",
+            "isoCode": "",
+            "shortName": "ZH-AF-LU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Laufen-Uhwiesen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-KL",
+            "isoCode": "",
+            "shortName": "ZH-AF-KL",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Kleinandelfingen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-HE",
+            "isoCode": "",
+            "shortName": "ZH-AF-HE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Henggart"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-FL",
+            "isoCode": "",
+            "shortName": "ZH-AF-FL",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Flurlingen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-FE",
+            "isoCode": "",
+            "shortName": "ZH-AF-FE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Feuerthalen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-FC",
+            "isoCode": "",
+            "shortName": "ZH-AF-FC",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Flaach"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-AF-DO",
+            "isoCode": "",
+            "shortName": "ZH-AF-DO",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Dorf"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "CH-ZH-ML",
+        "isoCode": "",
+        "shortName": "ZH-ML",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Bezirk"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Meilen"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ],
+        "children": [
+          {
+            "code": "CH-ZH-ML-UE",
+            "isoCode": "",
+            "shortName": "ZH-ML-UE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Uetikon am See"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-ML-ZO",
+            "isoCode": "",
+            "shortName": "ZH-ML-ZO",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Zollikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-ML-ZU",
+            "isoCode": "",
+            "shortName": "ZH-ML-ZU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Zumikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-ML-KU",
+            "isoCode": "",
+            "shortName": "ZH-ML-KU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Küsnacht (ZH)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-ML-HO",
+            "isoCode": "",
+            "shortName": "ZH-ML-HO",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Hombrechtikon"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-ML-HE",
+            "isoCode": "",
+            "shortName": "ZH-ML-HE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Herrliberg"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-ML-ER",
+            "isoCode": "",
+            "shortName": "ZH-ML-ER",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Erlenbach (ZH)"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-ML-MA",
+            "isoCode": "",
+            "shortName": "ZH-ML-MA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Männedorf"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-ML-ME",
+            "isoCode": "",
+            "shortName": "ZH-ML-ME",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Meilen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-ML-OE",
+            "isoCode": "",
+            "shortName": "ZH-ML-OE",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Oetwil am See"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-ML-ST",
+            "isoCode": "",
+            "shortName": "ZH-ML-ST",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Stäfa"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "CH-ZH-US",
+        "isoCode": "",
+        "shortName": "ZH-US",
+        "category": [
+          {
+            "language": "DE",
+            "text": "Bezirk"
+          }
+        ],
+        "name": [
+          {
+            "language": "DE",
+            "text": "Uster"
+          }
+        ],
+        "officialLanguages": [
+          "DE"
+        ],
+        "children": [
+          {
+            "code": "CH-ZH-US-US",
+            "isoCode": "",
+            "shortName": "ZH-US-US",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Uster"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-US-VO",
+            "isoCode": "",
+            "shortName": "ZH-US-VO",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Volketswil"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-US-WB",
+            "isoCode": "",
+            "shortName": "ZH-US-WB",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Wangen-Brüttisellen"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-US-DU",
+            "isoCode": "",
+            "shortName": "ZH-US-DU",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Dübendorf"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-US-EG",
+            "isoCode": "",
+            "shortName": "ZH-US-EG",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Egg"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-US-FA",
+            "isoCode": "",
+            "shortName": "ZH-US-FA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Fällanden"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-US-GR",
+            "isoCode": "",
+            "shortName": "ZH-US-GR",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Greifensee"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-US-MA",
+            "isoCode": "",
+            "shortName": "ZH-US-MA",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Maur"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-US-MO",
+            "isoCode": "",
+            "shortName": "ZH-US-MO",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Mönchaltorf"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          },
+          {
+            "code": "CH-ZH-US-SW",
+            "isoCode": "",
+            "shortName": "ZH-US-SW",
+            "category": [
+              {
+                "language": "DE",
+                "text": "Gemeinde"
+              }
+            ],
+            "name": [
+              {
+                "language": "DE",
+                "text": "Schwerzenbach"
+              }
+            ],
+            "officialLanguages": [
+              "DE"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

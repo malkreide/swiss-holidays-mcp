@@ -1,0 +1,447 @@
+[
+  {
+    "isoCode": "AD",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Andorra"
+      }
+    ],
+    "officialLanguages": [
+      "CA"
+    ]
+  },
+  {
+    "isoCode": "AL",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Albanien"
+      }
+    ],
+    "officialLanguages": [
+      "SQ"
+    ]
+  },
+  {
+    "isoCode": "AT",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Österreich"
+      }
+    ],
+    "officialLanguages": [
+      "DE"
+    ]
+  },
+  {
+    "isoCode": "BE",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Belgien"
+      }
+    ],
+    "officialLanguages": [
+      "NL",
+      "FR",
+      "DE"
+    ]
+  },
+  {
+    "isoCode": "BG",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Bulgarien"
+      }
+    ],
+    "officialLanguages": [
+      "BG"
+    ]
+  },
+  {
+    "isoCode": "BR",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Brasilien"
+      }
+    ],
+    "officialLanguages": [
+      "PT"
+    ]
+  },
+  {
+    "isoCode": "BY",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Belarus"
+      }
+    ],
+    "officialLanguages": [
+      "BE",
+      "RU"
+    ]
+  },
+  {
+    "isoCode": "CH",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Schweiz"
+      }
+    ],
+    "officialLanguages": [
+      "DE",
+      "FR",
+      "IT",
+      "RM"
+    ]
+  },
+  {
+    "isoCode": "CZ",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Tschechien"
+      }
+    ],
+    "officialLanguages": [
+      "CS"
+    ]
+  },
+  {
+    "isoCode": "DE",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Deutschland"
+      }
+    ],
+    "officialLanguages": [
+      "DE"
+    ]
+  },
+  {
+    "isoCode": "EE",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Estland"
+      }
+    ],
+    "officialLanguages": [
+      "ET"
+    ]
+  },
+  {
+    "isoCode": "ES",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Spanien"
+      }
+    ],
+    "officialLanguages": [
+      "ES",
+      "CA",
+      "EU",
+      "GL"
+    ]
+  },
+  {
+    "isoCode": "FR",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Frankreich"
+      }
+    ],
+    "officialLanguages": [
+      "FR"
+    ]
+  },
+  {
+    "isoCode": "HR",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Kroatien"
+      }
+    ],
+    "officialLanguages": [
+      "HR"
+    ]
+  },
+  {
+    "isoCode": "HU",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Ungarn"
+      }
+    ],
+    "officialLanguages": [
+      "HU"
+    ]
+  },
+  {
+    "isoCode": "IE",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Irland"
+      }
+    ],
+    "officialLanguages": [
+      "EN",
+      "GA"
+    ]
+  },
+  {
+    "isoCode": "IT",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Italien"
+      }
+    ],
+    "officialLanguages": [
+      "IT"
+    ]
+  },
+  {
+    "isoCode": "LI",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Liechtenstein"
+      }
+    ],
+    "officialLanguages": [
+      "DE"
+    ]
+  },
+  {
+    "isoCode": "LT",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Litauen"
+      }
+    ],
+    "officialLanguages": [
+      "LT"
+    ]
+  },
+  {
+    "isoCode": "LU",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Luxemburg"
+      }
+    ],
+    "officialLanguages": [
+      "LB",
+      "FR",
+      "DE"
+    ]
+  },
+  {
+    "isoCode": "LV",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Lettland"
+      }
+    ],
+    "officialLanguages": [
+      "LV"
+    ]
+  },
+  {
+    "isoCode": "MC",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Monaco"
+      }
+    ],
+    "officialLanguages": [
+      "FR"
+    ]
+  },
+  {
+    "isoCode": "MD",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Moldau"
+      }
+    ],
+    "officialLanguages": [
+      "RO"
+    ]
+  },
+  {
+    "isoCode": "MT",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Malta"
+      }
+    ],
+    "officialLanguages": [
+      "MT",
+      "EN"
+    ]
+  },
+  {
+    "isoCode": "MX",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Mexiko"
+      }
+    ],
+    "officialLanguages": [
+      "ES"
+    ]
+  },
+  {
+    "isoCode": "NL",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Niederlande"
+      }
+    ],
+    "officialLanguages": [
+      "NL"
+    ]
+  },
+  {
+    "isoCode": "PL",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Polen"
+      }
+    ],
+    "officialLanguages": [
+      "PL"
+    ]
+  },
+  {
+    "isoCode": "PT",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Portugal"
+      }
+    ],
+    "officialLanguages": [
+      "PT"
+    ]
+  },
+  {
+    "isoCode": "RO",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Rumänien"
+      }
+    ],
+    "officialLanguages": [
+      "RO"
+    ]
+  },
+  {
+    "isoCode": "RS",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Serbien"
+      }
+    ],
+    "officialLanguages": [
+      "SR"
+    ]
+  },
+  {
+    "isoCode": "SE",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Schweden"
+      }
+    ],
+    "officialLanguages": [
+      "SV"
+    ]
+  },
+  {
+    "isoCode": "SI",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Slowenien"
+      }
+    ],
+    "officialLanguages": [
+      "SL"
+    ]
+  },
+  {
+    "isoCode": "SK",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Slowakei"
+      }
+    ],
+    "officialLanguages": [
+      "SK"
+    ]
+  },
+  {
+    "isoCode": "SM",
+    "name": [
+      {
+        "language": "DE",
+        "text": "San Marino"
+      }
+    ],
+    "officialLanguages": [
+      "IT"
+    ]
+  },
+  {
+    "isoCode": "VA",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Vatikanstadt"
+      }
+    ],
+    "officialLanguages": [
+      "IT"
+    ]
+  },
+  {
+    "isoCode": "ZA",
+    "name": [
+      {
+        "language": "DE",
+        "text": "Südafrika"
+      }
+    ],
+    "officialLanguages": [
+      "EN"
+    ]
+  }
+]
