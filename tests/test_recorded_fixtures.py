@@ -24,17 +24,28 @@ from fixture_data import fixture_json, provenance, recorded_names
 
 from swiss_holidays_mcp.constants import NAGER_BASE, OPENHOLIDAYS_BASE
 
-# Jeder externe Endpunkt dieses Servers und die Fixture dazu. Ein Endpunkt ohne
-# Aufzeichnung faellt in `test_jeder_endpunkt_hat_eine_aufzeichnung`.
+# Jeder externe Endpunkt dieses Servers und die Aufzeichnungen dazu. Ein
+# Endpunkt ohne Aufzeichnung faellt in `test_jeder_endpunkt_hat_eine_aufzeichnung`.
+#
+# Je Endpunkt eine **Menge**, nicht eine Datei: `/SchoolHolidays` wird in zwei
+# Formen abgefragt — mit Kantonsfilter und ohne. Als einzelner Eintrag sah die
+# zweite Form aus wie gar keine, und genau daran ist sie lange unbemerkt
+# geblieben.
 ENDPOINTS = {
-    f"{OPENHOLIDAYS_BASE}/Subdivisions": "subdivisions.json",
-    f"{OPENHOLIDAYS_BASE}/Groups": "groups.json",
-    f"{OPENHOLIDAYS_BASE}/PublicHolidays": "public_holidays.json",
-    f"{OPENHOLIDAYS_BASE}/SchoolHolidays": "school_holidays.json",
-    f"{OPENHOLIDAYS_BASE}/Countries": "countries.json",
-    f"{NAGER_BASE}/LongWeekend": "long_weekends.json",
-    f"{NAGER_BASE}/AvailableCountries": "available_countries.json",
+    f"{OPENHOLIDAYS_BASE}/Subdivisions": {"subdivisions.json"},
+    f"{OPENHOLIDAYS_BASE}/Groups": {"groups.json"},
+    f"{OPENHOLIDAYS_BASE}/PublicHolidays": {"public_holidays.json"},
+    f"{OPENHOLIDAYS_BASE}/SchoolHolidays": {
+        "school_holidays.json",
+        "school_holidays_all.json",
+    },
+    f"{OPENHOLIDAYS_BASE}/Countries": {"countries.json"},
+    f"{NAGER_BASE}/LongWeekend": {"long_weekends.json"},
+    f"{NAGER_BASE}/AvailableCountries": {"available_countries.json"},
 }
+
+#: Alle im Test erwarteten Aufzeichnungen, flach.
+ERWARTET = {name for namen in ENDPOINTS.values() for name in namen}
 
 JAHR = 2026
 KANTON = "CH-ZH"
@@ -43,6 +54,24 @@ KANTON = "CH-ZH"
 def mount(url: str, name: str) -> None:
     """Serviert Fixture `name` unter `url`. Aufgezeichnet wurde durchweg 200."""
     respx.get(url).mock(return_value=httpx.Response(200, json=fixture_json(name)))
+
+
+def mount_schulferien() -> None:
+    """Serviert `/SchoolHolidays` danach, ob ein Kantonsfilter gesetzt ist.
+
+    Das sind zwei Abfrageformen, nicht eine. `op_compare_school_holidays` fragt
+    **ohne** `subdivisionCode` ab und gruppiert dann *in* der Antwort nach
+    Kanton. Nach URL allein zugeordnet bekam es die kantonale Aufzeichnung — und
+    meldete daraufhin fuer jedes Kantonspaar null gemeinsame Tage. Ein
+    erfundener Negativbefund, der wie ein Ergebnis aussieht.
+    """
+
+    def antwort(request: httpx.Request) -> httpx.Response:
+        kanton = request.url.params.get("subdivisionCode")
+        name = "school_holidays.json" if kanton else "school_holidays_all.json"
+        return httpx.Response(200, json=fixture_json(name))
+
+    respx.get(f"{OPENHOLIDAYS_BASE}/SchoolHolidays").mock(side_effect=antwort)
 
 
 # --------------------------------------------------------------------------
@@ -67,11 +96,11 @@ def test_jede_fixture_steht_in_der_provenance():
 
 def test_jeder_endpunkt_hat_eine_aufzeichnung():
     """Bewacht die Regel selbst: eine aufgezeichnete Antwort je externem Endpunkt."""
-    fehlend = sorted(set(ENDPOINTS.values()) - set(recorded_names()))
+    fehlend = sorted(ERWARTET - set(recorded_names()))
     assert not fehlend, f"Endpunkte ohne Aufzeichnung: {fehlend}"
 
 
-@pytest.mark.parametrize("name", sorted(ENDPOINTS.values()))
+@pytest.mark.parametrize("name", sorted(ERWARTET))
 def test_jede_aufzeichnung_ist_nicht_leer(name):
     """Eine leere Aufzeichnung sieht aus wie eine gueltige und prueft nichts."""
     assert fixture_json(name), f"{name} ist leer — neu aufzeichnen"
@@ -101,11 +130,50 @@ async def test_public_holidays_aus_der_aufzeichnung(client):
 @respx.mock
 async def test_school_holidays_aus_der_aufzeichnung(client):
     rows = fixture_json("school_holidays.json")
-    mount(f"{OPENHOLIDAYS_BASE}/SchoolHolidays", "school_holidays.json")
+    mount_schulferien()
     payload, _, _ = await client.school_holidays(f"{JAHR}-01-01", f"{JAHR}-12-31", "DE", KANTON)
     assert len(payload) == len(rows)
     assert all(h["startDate"] and h["endDate"] for h in payload)
     assert all(h["startDate"] <= h["endDate"] for h in payload), "Ferien enden nicht vor Beginn"
+
+
+@respx.mock
+async def test_der_kantonsvergleich_findet_ueberhaupt_ueberschneidungen(client):
+    """Der Vergleich fragt schweizweit ab und gruppiert *in* der Antwort.
+
+    Mit der kantonalen Aufzeichnung daneben — der einzigen, die es gab — kam
+    fuer jedes Kantonspaar null heraus: «keine gemeinsamen Ferientage in der
+    ganzen Schweiz». Das ist kein Ergebnis, das ist die Aufzeichnung, die zur
+    Abfrage nicht passt.
+
+    Diese Zusicherung faellt, sobald der Vergleich wieder aus einer Antwort
+    rechnet, die nur einen Kanton fuehrt.
+    """
+    from swiss_holidays_mcp import server
+
+    mount_schulferien()
+    ergebnis = await server.op_compare_school_holidays(client, ["CH-ZH", "CH-BE", "CH-VD"], JAHR)
+    assert ergebnis.rows, "der Vergleich liefert keine Zeilen"
+    assert any(r.overlapping_days > 0 for r in ergebnis.rows), (
+        "kein einziges Kantonspaar teilt einen Ferientag — die Antwort, aus der "
+        "gerechnet wird, fuehrt offenbar nur einen Kanton"
+    )
+
+
+@respx.mock
+async def test_die_schweizweite_aufzeichnung_fuehrt_mehr_als_einen_kanton():
+    """Sonst belegte die zweite Datei nichts.
+
+    Der Vergleich kann nur finden, was in der Liste steht. Eine schweizweite
+    Aufzeichnung, die doch nur einen Kanton fuehrt, waere von der kantonalen
+    nicht zu unterscheiden — und der Test darueber waere Zierde.
+    """
+    alle = fixture_json("school_holidays_all.json")
+    kantone = {s.get("code") for e in alle for s in (e.get("subdivisions") or [])}
+    assert len(kantone) > 5, f"nur {len(kantone)} Kanton(e) in der Aufzeichnung: {sorted(kantone)}"
+    kantonal = fixture_json("school_holidays.json")
+    nur_kantonal = {s.get("code") for e in kantonal for s in (e.get("subdivisions") or [])}
+    assert nur_kantonal == {KANTON}, f"die kantonale Aufzeichnung fuehrt {nur_kantonal}"
 
 
 @respx.mock
