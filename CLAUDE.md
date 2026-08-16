@@ -55,9 +55,28 @@ sie dieselbe Version aus `pyproject.toml` beziehen und keine zweite nennen.
 
 ```
 ruff check src/ tests/
+python -m py_compile src/swiss_holidays_mcp/server.py
+python -m py_compile src/swiss_holidays_mcp/client.py
+python -c "from swiss_holidays_mcp.server import mcp; print('Import OK')"
 pytest tests/ -v -m "not live"
 ruff format --check src/ tests/
 ```
+
+Syntax-Prüfung und Import-Test fehlten hier, obwohl der Block «wörtlich»
+heisst — sie stehen in `ci.yml` zwischen Lint und Tests.
+
+**Die Matrix ist 3.10/3.11/3.12 — ohne 3.13.** Damit ist dies einer von zwei
+Servern im Portfolio (mit `swiss-procurement-mcp`), die das aktuellste Feld
+nicht fahren, während die übrigen bei 3.11–3.13 liegen. Die zwei ruff-Gates
+liegen ausserdem im Job `lint`, der keine Matrix hat und auf 3.11 läuft; ein
+`fail-fast: false` steht nicht da.
+
+**Ein dritter Job gatet mit: `security`** («Dependency security scan», Python
+3.11). Er stand in keiner Liste und lässt sich lokal nicht nebenbei nachfahren.
+
+**Es gibt kein Versions-Sync-Gate.** `scripts/` enthält nur
+`classify_live_run.py` und `record_fixtures.py`. `pyproject.toml` und
+`server.json` stehen beide auf `0.6.0`, gehalten wird das von nichts.
 
 **Live-Tests: geplanter Workflow vorhanden.** `.github/workflows/live-tests.yml`,
 `cron: "0 4 * * *"` plus `workflow_dispatch`. Die Live-Suite ist also nicht bloss
