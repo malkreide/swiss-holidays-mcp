@@ -136,6 +136,20 @@ PROBE_TIMEOUT = 8.0
 
 _log = get_logger()
 
+# --- The two seams a test may take over -------------------------------------
+# The retry loop's wait and its clock, each under a name of this module's own.
+# A test that instead patches `client.asyncio.sleep` or `client.time.monotonic`
+# reaches the *stdlib module* — `client.asyncio` is `asyncio` — and replaces the
+# function for the whole process, not for this loop.
+#
+# For the clock that is not a style question. `asyncio`'s event loop reads
+# `time.monotonic` from the same module object, so a frozen clock stops the loop:
+# every timer scheduled while it is frozen waits for a moment that never comes,
+# `asyncio.wait_for` below included. The budget's deadline would then be out of
+# force in exactly the tests written to check the budget — and nothing says so.
+_sleep = asyncio.sleep
+_monotonic = time.monotonic
+
 
 class UpstreamError(RuntimeError):
     """Upstream unreachable after all retries (message is log-safe, no internals)."""
@@ -233,7 +247,7 @@ class HolidayClient:
         guard.assert_resolved_ip_safe(host)
 
         last_error: Exception | None = None
-        deadline = time.monotonic() + RETRY_TOTAL_BUDGET
+        deadline = _monotonic() + RETRY_TOTAL_BUDGET
         attempts = 0
 
         for attempt in range(MAX_ATTEMPTS):
@@ -241,11 +255,11 @@ class HolidayClient:
                 delay = compute_delay(attempt, last_error)
                 # A wait that outlasts the budget is a wait for nobody: the
                 # caller has given up by the time it ends. Stop instead.
-                if delay >= deadline - time.monotonic():
+                if delay >= deadline - _monotonic():
                     break
-                await asyncio.sleep(delay)
+                await _sleep(delay)
 
-            remaining = deadline - time.monotonic()
+            remaining = deadline - _monotonic()
             if remaining <= 0:
                 break
             attempts += 1

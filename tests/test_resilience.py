@@ -4,18 +4,27 @@ import httpx
 import pytest
 import respx
 
+from swiss_holidays_mcp import client as client_mod
 from swiss_holidays_mcp.constants import OPENHOLIDAYS_BASE
 from swiss_holidays_mcp.server import op_get_school_holidays, op_source_status
 
 
 @pytest.fixture(autouse=True)
 def no_backoff_delay(monkeypatch):
-    """Keep the retry logic, drop the wall-clock wait."""
+    """Keep the retry logic, drop the wall-clock wait.
+
+    Taken over at `client._sleep`, a name of the module, and not at
+    `client.asyncio.sleep`. The latter reads as a local override and is not:
+    `client.asyncio` *is* the stdlib module, so the replacement holds for the
+    whole process — httpx, respx, anyio and anything else running in it. This
+    fixture is `autouse`, so that reach covered every test in the file.
+    `test_retry_policy.py` holds the seam in place.
+    """
 
     async def _instant(_seconds: float) -> None:
         return None
 
-    monkeypatch.setattr("swiss_holidays_mcp.client.asyncio.sleep", _instant)
+    monkeypatch.setattr(client_mod, "_sleep", _instant)
 
 
 @respx.mock

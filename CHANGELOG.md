@@ -7,6 +7,45 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Behoben
 
+- **Das Zeitbudget des Retry hatte keinen einzigen Test.** `test_retry_policy.py`
+  prüfte ausschliesslich `compute_delay` — eine reine Funktion, die *wie
+  schnell* beantwortet und nie *wie lange*. Niemand fuhr die Schleife, also
+  waren `RETRY_TOTAL_BUDGET`, der Abbruch vor einem unbezahlbaren Warten und
+  die `asyncio.wait_for`-Frist, die das Budget durchsetzt, ungedeckt. Drei
+  neue Tests decken sie, je in beide Richtungen:
+  `test_das_budget_kuerzt_die_leiter` (mit der Gegenrichtung
+  `test_ein_weites_budget_kuerzt_nichts`, sonst bestünde der erste auch auf
+  einer kaputten Schleife) und
+  `test_eine_langsame_antwort_wird_von_der_wanduhr_geschnitten` — bewusst ohne
+  Fake-Uhr, weil die Zusicherung über echte Zeit geht.
+
+  Die erste Fassung von `test_das_budget_kuerzt_die_leiter` zählte nur die
+  Versuche und blieb grün, als der Abbruch *vor* dem Warten entfernt wurde —
+  der zweite Abbruch fing es auf, und die Versuchszahl kann beide nicht
+  unterscheiden. Sie prüft jetzt zusätzlich, dass die Summe der Wartezeiten das
+  Budget nicht übersteigt; genau das verspricht der Kommentar in
+  `_fetch_with_retry`.
+
+- **Die autouse-Fixture der Resilienz-Tests ersetzte `asyncio.sleep` im ganzen
+  Prozess.** `monkeypatch.setattr("swiss_holidays_mcp.client.asyncio.sleep", …)`
+  liest sich lokal und ist es nicht: `client.asyncio` **ist** das
+  stdlib-Modul. Weil die Fixture `autouse` ist, galt der Ersatz für jeden Test
+  der Datei — httpx, respx und anyio eingeschlossen.
+
+  Beide Nahtstellen tragen jetzt einen Namen dieses Moduls, `client._sleep` und
+  `client._monotonic`; das ist die Portfolio-Konvention aus `CLAUDE.md` Teil 1.
+  Ein Rundgang über die 23 Server im Zugriff fand dieses Repo und
+  `swiss-efv-mcp` als die letzten beiden ohne sie.
+
+  Für die Uhr ist das kein Stil, sondern Mechanik: `asyncio` liest
+  `time.monotonic` aus demselben Modulobjekt, eine eingefrorene Uhr hält also
+  `loop.time()` an — und `asyncio.wait_for`, die Frist des Budgets, wartet dann
+  auf einen Moment, der nie kommt. Hier fiel das nicht auf, weil es die Uhr gar
+  nicht traf; deshalb liest
+  `test_die_beiden_nahtstellen_gehoeren_dem_modul` die Schleife im Quelltext,
+  statt sich auf Verhalten zu verlassen. Ein Rückfall auf `asyncio.sleep` macht
+  die Datei sonst nur 50× langsamer (0,3 s → 16 s) und meldet nichts.
+
 - **Der Kantonsvergleich rechnete aus einer Antwort, die nur einen Kanton
   führte.** `op_compare_school_holidays` fragt `/SchoolHolidays` **ohne**
   `subdivisionCode` ab — schweizweit — und gruppiert dann *in* der Antwort nach
