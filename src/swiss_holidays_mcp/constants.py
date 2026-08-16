@@ -6,6 +6,8 @@ with `FINDING:` so that they survive future refactorings.
 
 from __future__ import annotations
 
+from ._version import __version__
+
 OPENHOLIDAYS_BASE = "https://openholidaysapi.org"
 NAGER_BASE = "https://date.nager.at/api/v3"
 
@@ -24,7 +26,7 @@ MCP_PROTOCOL_VERSION = "2025-06-18"
 MIN_YEAR = 1970
 MAX_YEAR = 2100
 
-USER_AGENT = "swiss-holidays-mcp/0.6.0 (+https://github.com/malkreide/swiss-holidays-mcp)"
+USER_AGENT = f"swiss-holidays-mcp/{__version__} (+https://github.com/malkreide/swiss-holidays-mcp)"
 
 ATTRIBUTION_OPENHOLIDAYS = (
     "Data: OpenHolidays API (openholidaysapi.org) — CC BY 4.0. "
