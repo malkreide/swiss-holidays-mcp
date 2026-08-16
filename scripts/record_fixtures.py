@@ -122,6 +122,23 @@ def main() -> int:
         f"vollstaendig; {SUBDIVISION}, Jahr {YEAR} ({len(school)} Ferien)",
     )
 
+    # Dieselbe Abfrage ohne `subdivisionCode` — eine eigene Abfrageform, nicht
+    # eine Spielart. `op_compare_school_holidays` fragt so ab und gruppiert dann
+    # *in* der Antwort nach Kanton. Mit der kantonalen Aufzeichnung daneben
+    # meldete der Vergleich fuer jedes Paar null gemeinsame Tage — ein
+    # erfundener Negativbefund, der wie ein Ergebnis aussieht.
+    _, school_all, url = get(OPENHOLIDAYS, "/SchoolHolidays", {**base_params, **span})
+    kantone = sorted({s.get("code") for e in school_all for s in (e.get("subdivisions") or [])})
+    write(
+        "school_holidays_all.json",
+        school_all,
+        url,
+        f"vollstaendig und ungekuerzt; ohne Kantonsfilter, Jahr {YEAR} "
+        f"({len(school_all)} Ferien ueber {len(kantone)} Kantone). Ungekuerzt, weil der "
+        "Vergleich *in* dieser Liste nach Kanton gruppiert — ein Schnitt erfaende "
+        "fehlende Ueberschneidungen",
+    )
+
     _, countries, url = get(OPENHOLIDAYS, "/Countries", {"languageIsoCode": LANGUAGE})
     write(
         "countries.json", countries, url, f"vollstaendig; {len(countries)} Laender (Health-Probe)"

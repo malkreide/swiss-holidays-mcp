@@ -5,6 +5,40 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Behoben
+
+- **Der Kantonsvergleich rechnete aus einer Antwort, die nur einen Kanton
+  führte.** `op_compare_school_holidays` fragt `/SchoolHolidays` **ohne**
+  `subdivisionCode` ab — schweizweit — und gruppiert dann *in* der Antwort nach
+  Kanton. Aufgezeichnet war nur die kantonale Abfrage
+  (`subdivisionCode=CH-ZH`), und der Fixture-Dispatcher ordnete nach URL zu.
+  Beim Abspielen bekam der Vergleich damit zehn Zürcher Ferieneinträge und
+  meldete für **jedes** Kantonspaar `overlapping_days = 0`:
+
+  ```
+  CH-ZH vs CH-BE: overlapping_days=0
+  CH-ZH vs CH-VD: overlapping_days=0
+  CH-BE vs CH-VD: overlapping_days=0
+  ```
+
+  «Keine gemeinsamen Ferientage in der ganzen Schweiz» ist kein Ergebnis,
+  sondern eine Aufzeichnung, die zur Abfrage nicht passt — und sie sieht aus
+  wie eine gültige Antwort. Es ist dieselbe Klasse Fehler wie ein
+  Kürzungsschnitt in einer Liste, in der der Server filtert: der Negativbefund
+  entsteht im Testaufbau und ist von einem echten nicht zu unterscheiden.
+
+  Aufgezeichnet ist jetzt auch die schweizweite Abfrageform
+  (`school_holidays_all.json`, ungekürzt), und der Dispatcher unterscheidet die
+  beiden Formen am gesetzten `subdivisionCode`.
+  `test_der_kantonsvergleich_findet_ueberhaupt_ueberschneidungen` fällt, sobald
+  wieder aus einer Ein-Kanton-Antwort gerechnet wird;
+  `test_die_schweizweite_aufzeichnung_fuehrt_mehr_als_einen_kanton` hält fest,
+  dass die zweite Datei überhaupt etwas belegt.
+
+  `ENDPOINTS` führt je Endpunkt jetzt eine **Menge** von Aufzeichnungen. Als
+  einzelner Eintrag sah eine zweite Abfrageform aus wie gar keine — daran ist
+  diese hier lange unbemerkt geblieben.
+
 ### Added
 
 - **Aufgezeichnete Fixtures, eine je externem Endpunkt, mit Nachweis.**

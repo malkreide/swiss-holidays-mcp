@@ -2,7 +2,7 @@
 
 **Erzeugt von `scripts/record_fixtures.py`. Nicht von Hand pflegen.**
 
-Aufgezeichnet am **2026-08-14** von den beiden Quellen dieses Servers:
+Aufgezeichnet am **2026-08-15** von den beiden Quellen dieses Servers:
 `https://openholidaysapi.org` und `https://date.nager.at/api/v3`.
 
 Ohne Datum ist «aufgezeichnet» nach zwei Jahren von «ausgedacht» nicht
@@ -30,7 +30,7 @@ Die lassen sich nicht auf Zuruf aufzeichnen.
 ## `subdivisions.json`
 
 - **Quelle:** `https://openholidaysapi.org/Subdivisions?countryIsoCode=CH&languageIsoCode=DE`
-- **Aufgezeichnet:** 2026-08-14
+- **Aufgezeichnet:** 2026-08-15
 - **Auswahl:** 3 von 26 Kantonen: CH-ZH, CH-BS, CH-AR — tief verschachtelt, flach und ganz ohne `children`; Satzform unangetastet
 - **Groesse:** 79040 B
 - **SHA-256:** `5815f6e9c1f426bd8563c54154dd1ef837cc065b0788dedf8456de0ab9e0236d`
@@ -38,7 +38,7 @@ Die lassen sich nicht auf Zuruf aufzeichnen.
 ## `groups.json`
 
 - **Quelle:** `https://openholidaysapi.org/Groups?countryIsoCode=CH&languageIsoCode=DE`
-- **Aufgezeichnet:** 2026-08-14
+- **Aufgezeichnet:** 2026-08-15
 - **Auswahl:** die ersten 3 von 11 Gruppen; Satzform unangetastet
 - **Groesse:** 6345 B
 - **SHA-256:** `27b4d7baedf4b2d57bf38207c18a75ccd588c2e803afc3c35140fc9e5b1e5623`
@@ -46,7 +46,7 @@ Die lassen sich nicht auf Zuruf aufzeichnen.
 ## `public_holidays.json`
 
 - **Quelle:** `https://openholidaysapi.org/PublicHolidays?countryIsoCode=CH&languageIsoCode=DE&validFrom=2026-01-01&validTo=2026-12-31&subdivisionCode=CH-ZH`
-- **Aufgezeichnet:** 2026-08-14
+- **Aufgezeichnet:** 2026-08-15
 - **Auswahl:** vollstaendig; CH-ZH, Jahr 2026 (13 Feiertage)
 - **Groesse:** 16359 B
 - **SHA-256:** `54a4e514ea1120be00e722cd80781aa2b293d72b76ca9ba12598b6213442a351`
@@ -54,15 +54,23 @@ Die lassen sich nicht auf Zuruf aufzeichnen.
 ## `school_holidays.json`
 
 - **Quelle:** `https://openholidaysapi.org/SchoolHolidays?countryIsoCode=CH&languageIsoCode=DE&validFrom=2026-01-01&validTo=2026-12-31&subdivisionCode=CH-ZH`
-- **Aufgezeichnet:** 2026-08-14
+- **Aufgezeichnet:** 2026-08-15
 - **Auswahl:** vollstaendig; CH-ZH, Jahr 2026 (10 Ferien)
 - **Groesse:** 5439 B
 - **SHA-256:** `3fca8cfbd6b2ab1c7d5342e2459faf428db84cff1cf71e9dc497529abdf8c453`
 
+## `school_holidays_all.json`
+
+- **Quelle:** `https://openholidaysapi.org/SchoolHolidays?countryIsoCode=CH&languageIsoCode=DE&validFrom=2026-01-01&validTo=2026-12-31`
+- **Aufgezeichnet:** 2026-08-15
+- **Auswahl:** vollstaendig und ungekuerzt; ohne Kantonsfilter, Jahr 2026 (193 Ferien ueber 41 Kantone). Ungekuerzt, weil der Vergleich *in* dieser Liste nach Kanton gruppiert — ein Schnitt erfaende fehlende Ueberschneidungen
+- **Groesse:** 96219 B
+- **SHA-256:** `629a456db1e808f08e519057e2c6bc8e76d6564bf82cfe86c398cee452951ad0`
+
 ## `countries.json`
 
 - **Quelle:** `https://openholidaysapi.org/Countries?languageIsoCode=DE`
-- **Aufgezeichnet:** 2026-08-14
+- **Aufgezeichnet:** 2026-08-15
 - **Auswahl:** vollstaendig; 36 Laender (Health-Probe)
 - **Groesse:** 6069 B
 - **SHA-256:** `508069c4c48c0a7af79756940e70fc542e22f5f450ccdeed7d1e4bf3fe09a8d5`
@@ -70,7 +78,7 @@ Die lassen sich nicht auf Zuruf aufzeichnen.
 ## `long_weekends.json`
 
 - **Quelle:** `https://date.nager.at/api/v3/LongWeekend/2026/CH`
-- **Aufgezeichnet:** 2026-08-14
+- **Aufgezeichnet:** 2026-08-15
 - **Auswahl:** vollstaendig; Jahr 2026, CH (3 lange Wochenenden)
 - **Groesse:** 460 B
 - **SHA-256:** `6e939ec14f6a91e08615a324b9cd57b7009ea22eae08abcf44a476f7f5140f3f`
@@ -78,7 +86,7 @@ Die lassen sich nicht auf Zuruf aufzeichnen.
 ## `available_countries.json`
 
 - **Quelle:** `https://date.nager.at/api/v3/AvailableCountries`
-- **Aufgezeichnet:** 2026-08-14
+- **Aufgezeichnet:** 2026-08-15
 - **Auswahl:** vollstaendig; 204 Laender (Health-Probe)
 - **Groesse:** 11963 B
 - **SHA-256:** `bdb24f821fe637805a4dc78bd0d752e108cff582de2d3ae44feedc98ddbca91e`
