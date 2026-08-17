@@ -27,8 +27,11 @@ jobs:
       - name: Abhängigkeiten installieren
         run: uv pip install -e ".[dev]" --system
 
+      # Scope-Aenderungen hier UND im Job `lint` nachziehen — `ruff check`
+      # steht in dieser Datei zweimal. Nur eine Stelle zu weiten heisst, dass
+      # ein Job durchlaesst, was der andere ablehnt.
       - name: Linting mit ruff
-        run: ruff check src/ tests/
+        run: ruff check src/ tests/ scripts/
 
       - name: Syntax-Prüfung
         run: |
@@ -63,14 +66,21 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev]"
 
-      - run: ruff check src/ tests/
+      # `scripts/` kam zuletzt dazu, weil es ausserhalb BEIDER Gates lag.
+      # Dort steht kein Beiwerk: `check_version_sync.py` ist selbst ein
+      # CI-Gate, `record_fixtures.py` erzeugt die Fixtures, gegen die die
+      # Unit-Tests laufen, und `classify_live_run.py` entscheidet, ob ein
+      # Live-Lauf `clear`, `finding` oder `unknown` heisst.
+      #
+      # Zweite Stelle: dasselbe `ruff check` steht oben im Job `test`.
+      - run: ruff check src/ tests/ scripts/
 
       # Scope identisch mit `ruff check` eine Zeile hoeher. Vorher lief das
       # Format-Gate nur ueber `src/`, waehrend der Linter auch `tests/` sah —
       # Testcode wurde also nie auf Format geprueft, und weil `ruff format`
       # niemand automatisch darueber laufen liess, driftete er ungehindert.
       # Zwei Gates mit zwei Reichweiten sehen aus wie ein Gate.
-      - run: ruff format --check src/ tests/
+      - run: ruff format --check src/ tests/ scripts/
 
   security:
     name: Dependency security scan
