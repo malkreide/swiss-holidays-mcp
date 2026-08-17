@@ -365,7 +365,8 @@ PYTHONPATH=src pytest tests/ -m "not live"
 PYTHONPATH=src pytest tests/ -m "live"
 
 # Linting
-ruff check src/ tests/
+ruff check src/ tests/ scripts/
+ruff format --check src/ tests/ scripts/
 ```
 
 ---
