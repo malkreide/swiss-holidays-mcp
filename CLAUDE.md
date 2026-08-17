@@ -72,29 +72,40 @@ schlägt den Pin, ohne dass der Install etwas meldet.
 
 ```
 python scripts/check_ruff_pin.py
-ruff check src/ tests/
+ruff check src/ tests/ scripts/
 python -m py_compile src/swiss_holidays_mcp/server.py
 python -m py_compile src/swiss_holidays_mcp/client.py
 python -c "from swiss_holidays_mcp.server import mcp; print('Import OK')"
 pytest tests/ -v -m "not live"
-ruff format --check src/ tests/
+python scripts/check_version_sync.py
+ruff format --check src/ tests/ scripts/
 ```
 
 Syntax-Prüfung und Import-Test fehlten hier, obwohl der Block «wörtlich»
 heisst — sie stehen in `ci.yml` zwischen Lint und Tests.
 
+**`ruff check` steht zweimal in `ci.yml`** — einmal im Job `test`, einmal im
+Job `lint`. Wer den Scope ändert, muss beide anfassen; eine gewitete und eine
+enge Stelle heisst, dass ein Job durchlässt, was der andere ablehnt. Nur
+`ruff format --check` gibt es einmal, im Job `lint`. Der Block oben führt
+beide Zeilen genau einmal auf, weil sie denselben Befehl meinen.
+
 **Die Matrix ist 3.10/3.11/3.12 — ohne 3.13.** Damit ist dies einer von zwei
 Servern im Portfolio (mit `swiss-procurement-mcp`), die das aktuellste Feld
-nicht fahren, während die übrigen bei 3.11–3.13 liegen. Die zwei ruff-Gates
-liegen ausserdem im Job `lint`, der keine Matrix hat und auf 3.11 läuft; ein
+nicht fahren, während die übrigen bei 3.11–3.13 liegen. `ruff format --check`
+liegt im Job `lint`, der keine Matrix hat und auf 3.11 läuft; ein
 `fail-fast: false` steht nicht da.
 
 **Ein dritter Job gatet mit: `security`** («Dependency security scan», Python
 3.11). Er stand in keiner Liste und lässt sich lokal nicht nebenbei nachfahren.
 
-**Es gibt kein Versions-Sync-Gate.** `scripts/` enthält nur
-`classify_live_run.py` und `record_fixtures.py`. `pyproject.toml` und
-`server.json` stehen beide auf `0.6.0`, gehalten wird das von nichts.
+**`scripts/` liegt seit diesem Commit im ruff-Scope.** Die drei Dateien dort
+— `check_version_sync.py`, `classify_live_run.py`, `record_fixtures.py` —
+bestanden ruff schon vorher, der erste Lauf war also grün. Das ist kein
+Argument gegen die Erweiterung, sondern der Grund, warum die Lücke so lange
+offenblieb: sie biss noch nicht. `check_version_sync.py` ist selbst ein Gate,
+`record_fixtures.py` erzeugt die Fixtures der Unit-Tests, und
+`classify_live_run.py` entscheidet über die Einordnung eines Live-Laufs.
 
 **Live-Tests: geplanter Workflow vorhanden.** `.github/workflows/live-tests.yml`,
 `cron: "0 4 * * *"` plus `workflow_dispatch`. Die Live-Suite ist also nicht bloss
