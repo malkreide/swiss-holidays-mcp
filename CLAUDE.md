@@ -112,3 +112,30 @@ offenblieb: sie biss noch nicht. `check_version_sync.py` ist selbst ein Gate,
 per `-m "not live"` ausgeschlossen — DRIFT-005 ist hier erfüllt. `schedule`
 greift nur auf dem Default-Branch (`main`): Änderungen am Workflow wirken erst
 nach dem Merge, vorher von Hand per `workflow_dispatch`.
+
+**Die CI triggert nur für PRs gegen `main`.** In `ci.yml`:
+`pull_request: branches: [main]`, dazu `push` auf `main` und `develop`. Ein PR
+gegen eine andere Basis zeigt keinen einzigen Check — das ist hier die zweite
+Ursache neben dem Merge-Konflikt aus Teil 1 und sieht genauso aus.
+
+**`check_ruff_pin.py` steht wie `ruff check` zweimal.** Job `test` und Job
+`lint` installieren je eigenständig, ihr ruff ist also nicht dasselbe Binary;
+deshalb prüfen beide den Pin. Wer einen Gate-Schritt ergänzt, fasst beide Jobs
+an. (Ein separater `pip install ruff==…`-Schritt existiert nicht — der oben
+erwähnte fehlende «Pin-Schritt» meint jenen, nicht diesen Pin-Check.)
+
+**Der pytest-Schritt setzt `PYTHONPATH: src` und `timeout-minutes: 5`.** Beides
+steht nicht im Befehl des Blocks oben; lokal darum
+`PYTHONPATH=src pytest tests/ -v -m "not live"`, so auch in der README.
+
+**Ein Live-Lauf hat drei Ausgänge, nicht zwei.** `scripts/classify_live_run.py`
+entscheidet `clear` / `finding` / `unknown`. Nur `finding` öffnet oder
+verlängert das Issue mit Label `upstream`. `unknown` heisst: Die Suite ist gar
+nicht gelaufen (Install kaputt, Timeout, alles übersprungen) — der Job wird
+ebenfalls rot, erzeugt aber bewusst kein Issue, weil nichts verglichen wurde.
+Der Unterschied steht nur im Log.
+
+**Release: `publish.yml` schreibt `server.json` aus dem Tag.** `on: release
+published` → PyPI (Trusted Publisher) → MCP-Registry, Version aus
+`GITHUB_REF_NAME`. Im Repo muss sie trotzdem stimmen: `check_version_sync.py`
+gatet `pyproject.toml` ↔ `server.json` / README / `src`.
