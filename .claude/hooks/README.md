@@ -37,9 +37,19 @@ vorhergesehen hat. Ein Hook, der bei Netzproblemen die Arbeit anhält, wird
 nach dem zweiten Mal abgeschaltet und schützt danach gar nichts.
 
 **2. Netzoperationen sind hart begrenzt.** `NET_TIMEOUT=5` Sekunden pro
-Aufruf, umgesetzt über `timeout(1)`; wo es das nicht gibt (etwa macOS), pollt
+Aufruf, umgesetzt über `timeout(1)`; wo es das nicht gibt, pollt
 `with_timeout` den Hintergrundprozess selbst und killt ihn. Zusätzlich
 `timeout: 15` in `settings.json` als Backstop auf Harness-Ebene.
+
+Der Fallback ist nicht der Sonderfall: macOS liefert `timeout` nicht mit, dort
+läuft also genau dieser Zweig. Er killt die **Prozessgruppe**, nicht nur die
+pid — `git fetch` startet Kindprozesse (`git-remote-https`, `ssh`), die einen
+Kill auf die pid allein überleben. Gemessen mit einem `git`, das im `fetch`
+hängt: `timeout(1)`-Pfad 0 Waisen, Fallback-Pfad vor dem Fix 1 Waise, danach
+0. Die stdout-Pipe halten sie nicht offen (die Umlenkung nach `/dev/null` wird
+vererbt), sie können aber eine `FETCH_HEAD.lock` hinterlassen, an der das
+nächste `fetch` scheitert — und der Hook schweigt bei jedem Fehler. Ein
+stiller Hook ist genau der Zustand, vor dem er warnen soll.
 
 Zwei Fallen, die beide zum Hänger führen und darum beide entschärft sind:
 
@@ -89,6 +99,34 @@ time (CLAUDE_PROJECT_DIR="$PWD" ./.claude/hooks/session-start.sh </dev/null; ech
 ```
 
 Erwartung: keine Ausgabe, `exit=0`, deutlich unter 15 Sekunden.
+
+Gegenprobe zum Prozessgruppen-Kill — ein `git`, das im `fetch` hängt, und ein
+`PATH` ohne `timeout(1)`, damit der Fallback läuft:
+
+```bash
+waisen() { ps -eo comm=,args= | awk '$1 ~ /(^|\/)sleep$/ && /3117/ {n++} END {print n+0}'; }
+d=$(mktemp -d); real=$(command -v git)
+printf '#!/usr/bin/env bash\ncase "$1" in fetch) sleep 3117;; esac\nexec %s "$@"\n' "$real" > "$d/git"
+chmod +x "$d/git"
+for b in bash sed cat sleep kill env; do ln -s "$(command -v $b)" "$d/$b"; done
+PATH="$d" CLAUDE_PROJECT_DIR="$PWD" ./.claude/hooks/session-start.sh </dev/null
+sleep 1; [ "$(waisen)" -eq 0 ] && echo "OK: keine Waise" || echo "FEHLER: Waise"
+```
+
+Erwartung: Rückkehr nach ~5 s, danach `OK: keine Waise`.
+
+**Nicht `pgrep -f 'sleep 3117'` benutzen.** `-f` matcht die ganze
+Kommandozeile, und die Zeile, die den Test *startet*, enthält das Muster
+selbst — der Aufruf findet also die eigene Shell und meldet eine Waise, die es
+nicht gibt. Genau das ist hier einmal passiert und hätte den Fix beinahe als
+wirkungslos erscheinen lassen. Darum `comm` prüfen, nicht `args`. Aus
+demselben Grund ist `pkill -f` beim Aufräumen gefährlich: es erschiesst die
+eigene Shell.
+
+Gegenprobe zur Gegenprobe — das Rezept muss anschlagen, wenn der Fix fehlt:
+`set -m` auskommentieren, `kill -9 -"$pid"` auf `kill -9 "$pid"` zurücksetzen,
+Lauf wiederholen. Erwartung: `FEHLER: Waise`. Ohne diesen Schritt wäre nicht
+gezeigt, dass der Test überhaupt etwas prüft.
 
 ## Reichweite
 
