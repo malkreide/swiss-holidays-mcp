@@ -41,12 +41,27 @@ with_timeout() {
     return $?
   fi
 
-  # Fallback ohne coreutils-timeout (z. B. macOS): selbst pollen.
+  # Fallback ohne coreutils-timeout: macOS liefert `timeout` nicht mit, dort
+  # laeuft also genau dieser Zweig - selbst pollen.
+  #
+  # `set -m` gibt dem Hintergrundjob eine eigene Prozessgruppe (pgid == pid),
+  # damit der Kill unten die ganze Gruppe trifft. Ohne das ueberlebt die
+  # Verwandtschaft: `git fetch` startet Kindprozesse (git-remote-https, ssh),
+  # und ein Kill nur auf die pid laesst die weiterlaufen - gemessen, nicht
+  # vermutet. Sie halten die stdout-Pipe des Hooks zwar nicht offen (die
+  # Umlenkung nach /dev/null wird vererbt), koennen aber eine
+  # FETCH_HEAD.lock hinterlassen, an der das naechste fetch scheitert. Der
+  # Hook schweigt dann - und ein stiller Hook ist genau der Zustand, vor dem
+  # er warnen soll.
+  set -m
   "$@" >/dev/null 2>&1 &
   local pid=$! waited=0 limit=$((NET_TIMEOUT * 10))
+  set +m
   while kill -0 "$pid" 2>/dev/null; do
     if [ "$waited" -ge "$limit" ]; then
-      kill -9 "$pid" 2>/dev/null
+      # Erst die Gruppe, dann ersatzweise die pid allein, falls das Anlegen
+      # der Gruppe nicht geklappt hat.
+      kill -9 -"$pid" 2>/dev/null || kill -9 "$pid" 2>/dev/null
       wait "$pid" 2>/dev/null
       return 124
     fi
