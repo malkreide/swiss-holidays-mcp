@@ -18,6 +18,21 @@ import respx
 from swiss_holidays_mcp import client
 from swiss_holidays_mcp.constants import OPENHOLIDAYS_BASE
 
+# Wall-clock numbers for the deadline test below, spread far enough apart that
+# scheduler jitter cannot move the outcome. Measured on 3.11 over 15 runs of
+# that test's own body, through pytest so every fixture is in place:
+# 0.125-0.151s against a 0.05s budget. Setup — building the `httpx.AsyncClient`
+# and the `HolidayClient` around it and the first call through them —
+# accounted for about 0.08s of that, more than the budget itself, so most of
+# what the test used to measure was not the deadline. The old bound of 0.6s
+# left 0.47s of absolute headroom, and CI jitter is absolute, not
+# proportional: in swiss-efv-mcp a loaded runner turned 0.105s into 0.55s on
+# 2026-08-21 and tore the same assertion there. Raising the budget does not
+# shrink that stall, it makes the stall small *relative to* what is measured.
+_BUDGET = 0.5
+_CUT_BY = 2.5
+_SLOW_RESPONSE = 8.0
+
 # eleven servers found on 2026-08-03, and every one of them looked fine.
 
 
@@ -209,20 +224,44 @@ async def test_eine_langsame_antwort_wird_von_der_wanduhr_geschnitten() -> None:
     clock that only moves when something sleeps cannot refute it. It is also the
     assurance a globally frozen clock made impossible — under one, the deadline
     below never fires and the test hangs instead of failing.
+
+    The margins are wide on purpose — see `_BUDGET` above for the measurement
+    that set them. Building both clients and the first call through them happen
+    before the clock starts, so the measured window holds the deadline and
+    nothing else.
     """
     import asyncio as echtes_asyncio
     import time as echte_zeit
 
+    # Warm-up on the untouched default budget, before it is narrowed below:
+    # pays whatever fresh clients and the first call through them cost, outside
+    # the window measured further down. Its own `HolidayClient` on purpose —
+    # the cache is per instance, so the timed call below still goes out.
+    route = respx.get(f"{OPENHOLIDAYS_BASE}/Subdivisions").mock(
+        return_value=httpx.Response(200, json=[])
+    )
+    async with client.HolidayClient(httpx.AsyncClient()) as warm:
+        await warm.subdivisions("DE")
+
     async def _langsam(request: httpx.Request) -> httpx.Response:
-        await echtes_asyncio.sleep(1.0)
+        await echtes_asyncio.sleep(_SLOW_RESPONSE)
         return httpx.Response(200, json=[])
 
-    respx.get(f"{OPENHOLIDAYS_BASE}/Subdivisions").mock(side_effect=_langsam)
+    route.mock(side_effect=_langsam)
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr(client, "RETRY_TOTAL_BUDGET", 0.05)
-        begonnen = echte_zeit.monotonic()
+        mp.setattr(client, "RETRY_TOTAL_BUDGET", _BUDGET)
         async with client.HolidayClient(httpx.AsyncClient()) as c:
+            # The clock starts *inside* the context manager: building and
+            # closing the clients cost more than the old 0.05s budget did, and
+            # that is setup, not deadline.
+            begonnen = echte_zeit.monotonic()
             with pytest.raises(client.UpstreamError):
                 await c.subdivisions("DE")
-        verstrichen = echte_zeit.monotonic() - begonnen
-    assert verstrichen < 0.6, f"the deadline did not cut: {verstrichen:.2f}s"
+            verstrichen = echte_zeit.monotonic() - begonnen
+
+    # Two-sided on purpose. The upper bound is the guarantee: a response that
+    # would have taken _SLOW_RESPONSE was cut. The lower bound says the cut came
+    # from the budget rather than from something failing straight away — a
+    # deadline computed wrong sails through an upper bound alone.
+    assert verstrichen >= _BUDGET / 2, f"cut too early to be the budget: {verstrichen:.3f}s"
+    assert verstrichen < _CUT_BY, f"the deadline did not cut: {verstrichen:.2f}s"
