@@ -5,6 +5,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Frischehinweise auf den auflistenden Methoden** (SEP-2549, Spec
+  `2026-07-28`): `tools/list`, `resources/list`, `resources/templates/list` und
+  `server/discover` antworten mit `ttlMs` 300000 und `cacheScope` `public`. Das
+  SDK setzt sonst «sofort veraltet, nie geteilt» und lässt damit jeden Client
+  bei jeder Verbindung neu auflisten. `resources/read` bleibt ohne Hinweis:
+  `holidays://{canton}/{year}` liefert eine Live-Abfrage, kein Verzeichnis.
+
+### Behoben
+
+- **`source_status` lieferte seit zwei Spec-Revisionen eine falsche
+  Protokollversion aus.** `MCP_PROTOCOL_VERSION` stand auf `2025-06-18`, das
+  gepinnte SDK spricht `2026-07-28` — und anders als anderswo ist diese
+  Konstante hier keine Doku-Zeile, sondern wird als Feld
+  `mcp_protocol_version` in der Antwort zurückgegeben. Jede Abfrage hat den
+  veralteten Wert als Tatsache ausgeliefert. Verglichen hat ihn nichts;
+  `tests/test_protocol_version.py` hält ihn jetzt gegen
+  `LATEST_PROTOCOL_VERSION` aus dem SDK.
+
+- **Browser-Clients scheiterten am Preflight.** `_CORS_ALLOW_HEADERS` nannte
+  `MCP-Protocol-Version`, aber weder `Mcp-Method` noch `Mcp-Name` — die beiden
+  anderen Header, nach denen Spec `2026-07-28` eine Streamable-HTTP-Anfrage
+  routet. Ein Browser darf einen nicht safelisteten Header nicht senden, wenn
+  der Server ihn nicht nennt: die Anfrage starb vor dem ersten MCP-Byte,
+  während stdio und Python weiterliefen.
+
 ### Behoben
 
 - **Die Pruefsummen im Fixture-Nachweis waren Zierde.** `PROVENANCE.md` fuehrt

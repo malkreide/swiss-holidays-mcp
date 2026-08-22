@@ -18,9 +18,16 @@ NAGER_BASE = "https://date.nager.at/api/v3"
 ALLOWED_HOSTS = frozenset({"openholidaysapi.org", "date.nager.at"})
 
 # ARCH-012: the MCP protocol version this server is built and tested against.
-# The negotiated version is handled by the pinned `mcp` SDK; this constant pins
-# the expected wire version explicitly and is surfaced in `source_status`.
-MCP_PROTOCOL_VERSION = "2025-06-18"
+# The pinned `mcp` SDK handles the wire version; this constant states it
+# explicitly and is surfaced in `source_status` — which is why it being wrong
+# was worse than a stale comment. It stood at "2025-06-18", two revisions
+# behind the "2026-07-28" the installed SDK speaks, and every `source_status`
+# call reported that stale value to the caller as fact.
+#
+# Nothing caught it, because nothing compared it to anything.
+# `tests/test_protocol_version.py` now holds it against the SDK's own
+# `LATEST_PROTOCOL_VERSION`.
+MCP_PROTOCOL_VERSION = "2026-07-28"
 
 # SEC-018: bounds for numeric tool inputs (no unbounded ranges).
 MIN_YEAR = 1970

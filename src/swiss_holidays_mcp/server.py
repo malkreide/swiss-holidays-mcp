@@ -23,6 +23,7 @@ from functools import wraps
 from itertools import combinations
 from typing import Annotated, Any
 
+from mcp.server.caching import CacheHint
 from mcp.server.mcpserver import Context, MCPServer
 from pydantic import Field
 
@@ -86,7 +87,30 @@ async def lifespan(_server: MCPServer) -> AsyncIterator[AppState]:
         await http.aclose()
 
 
-mcp = MCPServer("swiss-holidays-mcp", lifespan=lifespan)
+# SEP-2549, Spec 2026-07-28: die auflistenden Methoden tragen `ttlMs` und
+# `cacheScope`. Das SDK setzt beides auf «sofort veraltet, nie geteilt» — ein
+# Server ohne `cache_hints` verhaelt sich also nicht neutral, sondern laesst
+# jeden Client bei jeder Verbindung neu auflisten, fuer Listen, die beim Import
+# feststehen und sich zur Laufzeit des Prozesses nicht aendern koennen.
+#
+# `public` folgt aus der Sache, nicht aus Bequemlichkeit: die 13 Tools werden
+# per Dekorator beim Import registriert, es gibt keine Filterung nach Aufrufer.
+# Sobald eine Liste vom Aufrufer abhaengt, muss der Scope im selben Commit auf
+# `private` wechseln.
+#
+# `resources/read` steht bewusst nicht dabei: `holidays://{canton}/{year}`
+# liefert Feiertage aus einer Live-Abfrage, nicht das Verzeichnis der
+# Ressourcen. Ein Hinweis dort waere eine Zusicherung ueber Inhalt.
+LIST_CACHE_TTL_MS = 300_000
+
+CACHE_HINTS = {
+    "tools/list": CacheHint(ttl_ms=LIST_CACHE_TTL_MS, scope="public"),
+    "resources/list": CacheHint(ttl_ms=LIST_CACHE_TTL_MS, scope="public"),
+    "resources/templates/list": CacheHint(ttl_ms=LIST_CACHE_TTL_MS, scope="public"),
+    "server/discover": CacheHint(ttl_ms=LIST_CACHE_TTL_MS, scope="public"),
+}
+
+mcp = MCPServer("swiss-holidays-mcp", lifespan=lifespan, cache_hints=CACHE_HINTS)
 
 _OH = ATTRIBUTIONS["openholidays"]
 _NG = ATTRIBUTIONS["nager"]
