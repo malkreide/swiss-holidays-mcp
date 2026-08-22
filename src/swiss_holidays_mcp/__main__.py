@@ -19,10 +19,27 @@ from .settings import Settings
 if TYPE_CHECKING:
     from starlette.applications import Starlette
 
+# Die Header, nach denen Spec 2026-07-28 eine Streamable-HTTP-Anfrage routet —
+# in der Schreibweise des SDK (`mcp.shared.inbound`). Ein Browser darf einen
+# nicht safelisteten Header gar nicht erst senden, wenn der Server ihn nicht in
+# `Access-Control-Allow-Headers` nennt: ohne sie stirbt jede Cross-Origin-
+# Anfrage am Preflight, vor dem ersten MCP-Byte. stdio- und Python-Clients
+# kennen keinen Preflight und merken davon nichts — deshalb fiel es nicht auf.
+#
+# `Mcp-Param-*` fehlt bewusst: CORS kennt keinen Praefix-Wildcard, und kein
+# Tool-Schema dieses Servers traegt eine `x-mcp-header`-Annotation.
+CORS_ROUTING_HEADERS = ["Mcp-Method", "Mcp-Name", "Mcp-Protocol-Version"]
+
+
 # Headers a browser MCP client must be allowed to send / read on HTTP transports
 # (audit SDK-004). Mcp-Session-Id is the one that matters: without exposing it,
 # a cross-origin client cannot read the session id and cannot make follow-ups.
-_CORS_ALLOW_HEADERS = ["Content-Type", "Mcp-Session-Id", "Last-Event-ID", "MCP-Protocol-Version"]
+_CORS_ALLOW_HEADERS = [
+    "Content-Type",
+    *CORS_ROUTING_HEADERS,
+    "Mcp-Session-Id",
+    "Last-Event-ID",
+]
 _CORS_EXPOSE_HEADERS = ["Mcp-Session-Id"]
 _CORS_ALLOW_METHODS = ["GET", "POST", "DELETE", "OPTIONS"]
 
