@@ -7,6 +7,50 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Der Server ist nativ auf Spec `2026-07-28`.** Beide Aeren liefen schon
+  ueber dieses SDK, aber der Server behandelte nur eine davon als real. Zwei
+  Befunde, beide am 18.9.2026 durch `__main__._build_http_app` gemessen — die
+  ASGI-App, die dieses Repo in Produktion serviert:
+
+  1. **`source_status` meldete jedem Aufrufer dieselbe Konstante.** Ein
+     Pro-Request-Envelope mit `2026-07-28` bekam `2025-11-25` zurueck — eine
+     Falschauskunft ueber genau die Verbindung, ueber die sie lief. Neu liest
+     das Feld `Context.protocol_version`, also die Revision dieser Anfrage; die
+     Konstante heisst jetzt `FALLBACK_PROTOCOL_VERSION` und greift nur noch im
+     `op_*`-Layer, wo nichts ausgehandelt wurde. Der Handshake-Zweig meldet
+     unveraendert die Obergrenze, auch dem Client, der nach `2026-07-28` fragt.
+
+  2. **Der `serverInfo`-Stempel trug eine leere Version.** `2026-07-28` hat kein
+     `initialize`-Result; `serverInfo` faehrt als `_meta`-Stempel auf jedem
+     Result mit und ist damit die einzige Stelle, an der ein moderner Client
+     Server und Stand erfaehrt. Ohne `version=` stempelt das SDK `""` und setzt
+     nie eine eigene ein. `MCPServer` bekommt jetzt `version=__version__` (aus
+     den Paket-Metadaten, kein Literal) und `website_url`.
+
+  **Warum das zwei Revisionen lang gruen blieb.** Der Test dazu fuhr den
+  Tool-Aufruf ueber den In-Process-`Client` und verglich das Ergebnis mit
+  `LATEST_HANDSHAKE_VERSION`. Genau dieser Client handelt `2026-07-28` aus — die
+  Zusicherung bestaetigte also die Falschauskunft, statt sie zu widerlegen. Sie
+  war nicht zu schwach, sie fragte die falsche Aera ab.
+
+  Begruendet worden war die fehlende Messung mit dem Satz, dieses Repo baue
+  keine ASGI-App, durch die sich ein `initialize` schicken liesse. Es baut eine.
+  Aus «wurde nicht gemessen» war «ist nicht messbar» geworden, und das hielt die
+  Messung auf. `tests/test_protocol_version.py` faehrt jetzt beide Aeren durch
+  die Produktions-App: moderner Envelope, Handshake mit beiden Anfragewerten,
+  `server/discover`, der `serverInfo`-Stempel und der Rueckfall ohne Kontext.
+  Gegenprobe gefahren: jede der vier Zusicherungen einzeln neutralisiert, jede
+  reisst genau ihren Test und keinen anderen.
+
+  Nebenbefund, bewusst nicht geaendert: `server/discover` meldet
+  `prompts`, `resources.subscribe` und die `listChanged`-Flags, obwohl dieser
+  Server keine Prompts registriert und nichts auf dem `SubscriptionBus`
+  veroeffentlicht. Das ist die Ableitung des SDK — es fuehrt in der modernen
+  Aera die *bedienten Methoden*, und `prompts/list` wie `subscriptions/listen`
+  bedient `MCPServer` immer. Die Angabe ist damit richtig; sie sagt nichts
+  darueber zu, dass Ereignisse kommen. Erst die Optionsreferenz lesen, dann
+  einen Wert fuer falsch halten.
+
 - **Frischehinweise auf den auflistenden Methoden** (SEP-2549, Spec
   `2026-07-28`): `tools/list`, `resources/list`, `resources/templates/list` und
   `server/discover` antworten mit `ttlMs` 300000 und `cacheScope` `public`. Das

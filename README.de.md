@@ -334,26 +334,49 @@ Gemeindeebene publiziert sind); dafür ist keine separate Stadt-Datenquelle nöt
   cachebaren Kontext lesen können, ohne einen Tool-Aufruf. Es gibt keine
   wiederkehrenden Template-Workflows, daher keine **Prompts** (wird neu bewertet,
   falls sich das ändert).
-- **MCP-Protokoll-Version — zwei Ären.** `mcp` 2.x bedient beide über denselben
-  Server; die erste Anfrage einer Verbindung entscheidet, welche gilt: der
-  `initialize`-Handshake deckelt bei **`2025-11-25`**, der Pro-Request-Envelope
-  erreicht **`2026-07-28`**.
+- **MCP-Protokoll-Version — zwei Ären, beide nativ bedient.** `mcp` 2.x bedient
+  beide über denselben Server; die erste Anfrage einer Verbindung entscheidet,
+  welche gilt: der `initialize`-Handshake deckelt bei **`2025-11-25`**; die
+  Pro-Request-Envelope-Ära (Spec **`2026-07-28`**) kennt gar keinen Handshake.
+  Dort trägt jede Anfrage Protokollversion, Client-Info und
+  Client-Capabilities in `params._meta`, gespiegelt von den Routing-Headern
+  `Mcp-Protocol-Version` / `Mcp-Method` / `Mcp-Name`, und `server/discover`
+  tritt an die Stelle von `initialize`.
 
-  `source_status` liefert eine davon im Feld `mcp_protocol_version` aus — ein
-  einzelner String kann nicht beide nennen — und zwar die
-  **Handshake-Obergrenze**, denn die hat ein Client, der diesen Server über
-  `initialize` erreicht, tatsächlich ausgehandelt. Nachgemessen statt aus einem
-  Konstantennamen geschlossen: wer über den Handshake nach `2026-07-28` fragt,
-  bekommt `2025-11-25` zurück.
-
-  `MCP_PROTOCOL_VERSION` wird aus `LATEST_HANDSHAKE_VERSION` des SDK abgeleitet
+  `source_status` meldet im Feld `mcp_protocol_version` die Revision, über die
+  **diese Anfrage** hereinkam — pro Anfrage gelesen aus
+  `Context.protocol_version`. Bisher lieferte es eine einzige Konstante aus, die
+  Handshake-Obergrenze, und zwar an jeden Aufrufer: Wer `2026-07-28`
+  ausgehandelt hatte, bekam `2025-11-25` über die eigene Verbindung gemeldet.
+  Die Konstante bleibt nur noch als Rückfall für den `op_*`-Layer, wo nichts
+  ausgehandelt wurde; sie wird aus `LATEST_HANDSHAKE_VERSION` des SDK abgeleitet
   statt hingeschrieben und kann damit nicht mehr driften, wie sie es schon
   einmal tat — sie stand zwei Revisionen lang auf `2025-06-18`, während jede
   Abfrage den Wert als Tatsache ausgab.
-  [`tests/test_protocol_version.py`](tests/test_protocol_version.py) hält beide
-  Ären gegen das SDK und prüft auch das ausgelieferte Feld gegen das SDK, nicht
-  gegen die Konstante, aus der es stammt. Die Wire-Version stammt vom gepinnten
-  `mcp`-SDK (`mcp>=2.0.0,<3`).
+
+  Nachgemessen statt geschlossen:
+  [`tests/test_protocol_version.py`](tests/test_protocol_version.py) fährt beide
+  Ären durch dieselbe ASGI-App, die dieses Repo in Produktion serviert, und
+  vergleicht das ausgelieferte Feld je Ära. Die vorige Fassung jener Datei
+  behauptete, dieses Repo könne keine solche App bauen — es kann, und die
+  Behauptung überlebte die Messung um zwei Revisionen. Wer über den Handshake
+  nach `2026-07-28` fragt, bekommt weiterhin `2025-11-25` zurück, jetzt hier
+  gemessen statt an einem Schwester-Server. Die Wire-Version stammt vom
+  gepinnten `mcp`-SDK (`mcp>=2.0.0,<3`).
+- **Die Server-Identität reist an jedem Result mit.** `2026-07-28` hat kein
+  `initialize`-Result; `serverInfo` fährt stattdessen als `_meta`-Stempel auf
+  jedem Result mit — die einzige Stelle, an der ein Aufrufer erfährt, welcher
+  Server und welcher Stand geantwortet hat. Der Server übergibt `MCPServer`
+  seine Paketversion und die Homepage; ohne sie stempelt das SDK `version: ""`
+  und setzt nie eine eigene ein. Eine leere Version ist schlechter als eine
+  fehlende: Sie sieht wie eine Auskunft aus.
+- **Frischehinweise auf den auflistenden Methoden** (SEP-2549): `tools/list`,
+  `resources/list`, `resources/templates/list` und `server/discover` antworten
+  mit `ttlMs` 300000 und `cacheScope: public`. Ohne sie gilt die SDK-Vorgabe
+  «sofort veraltet, nie geteilt», und jeder Client listet bei jeder Verbindung
+  neu auf — für Listen, die beim Import feststehen. `resources/read` trägt
+  bewusst keinen Hinweis: `holidays://{canton}/{year}` ist eine Live-Abfrage,
+  kein Verzeichnis.
 - **Update-Policy.** SDK- und Dependency-Bumps kommen via Dependabot
   (wöchentlich); Protokoll-Version- oder Tool-Definition-Änderungen werden im
   [`CHANGELOG.md`](CHANGELOG.md) mit Versionssprung dokumentiert.

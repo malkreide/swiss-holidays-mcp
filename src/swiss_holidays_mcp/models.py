@@ -164,9 +164,11 @@ class SourceStatus(BaseModel):
 class StatusResponse(Envelope):
     mcp_protocol_version: str = Field(
         description=(
-            "MCP wire protocol revision served over the `initialize` handshake — "
-            "the ceiling a legacy client negotiates. The same server also serves "
-            "the newer per-request envelope era; a single field cannot name both."
+            "MCP wire protocol revision negotiated for *this* request. The server "
+            "serves two eras and the caller's first request picks one: the "
+            "`initialize` handshake caps at 2025-11-25, the per-request envelope "
+            "reaches 2026-07-28. Read it as a property of your connection, not of "
+            "the server."
         )
     )
     sources: list[SourceStatus]

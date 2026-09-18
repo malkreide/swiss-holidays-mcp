@@ -27,6 +27,7 @@ from mcp.server.caching import CacheHint
 from mcp.server.mcpserver import Context, MCPServer
 from pydantic import Field
 
+from ._version import __version__
 from .client import (
     ATTRIBUTIONS,
     HolidayClient,
@@ -38,8 +39,9 @@ from .client import (
 )
 from .constants import (
     CANTON_CODES,
+    FALLBACK_PROTOCOL_VERSION,
+    HOMEPAGE_URL,
     MAX_YEAR,
-    MCP_PROTOCOL_VERSION,
     MIN_YEAR,
     NAGER_BASE,
     OPENHOLIDAYS_BASE,
@@ -110,7 +112,25 @@ CACHE_HINTS = {
     "server/discover": CacheHint(ttl_ms=LIST_CACHE_TTL_MS, scope="public"),
 }
 
-mcp = MCPServer("swiss-holidays-mcp", lifespan=lifespan, cache_hints=CACHE_HINTS)
+# `version` und `website_url` sind nicht Kosmetik, sondern die Identitaet, die
+# ein moderner Client ueberhaupt bekommt. Spec 2026-07-28 kennt kein
+# `initialize`: `serverInfo` reist als `_meta`-Stempel auf JEDEM Result mit, und
+# das ist die einzige Stelle, an der ein Aufrufer erfaehrt, mit welchem Server
+# und welcher Fassung er spricht. Ohne diese beiden Argumente setzt das SDK
+# `version=""` — am 18.9.2026 durch die ASGI-App gemessen, auf `server/discover`
+# wie auf `tools/list`. Das SDK setzt nie eine eigene ein: ein unversionierter
+# Server meldet leer, und leer ist schlechter als abwesend, weil es wie eine
+# Angabe aussieht.
+#
+# Die Version kommt aus den Paket-Metadaten (`_version`), nicht aus einem
+# Literal — `scripts/check_version_sync.py` faengt ein Literal in `src/` ab.
+mcp = MCPServer(
+    "swiss-holidays-mcp",
+    version=__version__,
+    website_url=HOMEPAGE_URL,
+    lifespan=lifespan,
+    cache_hints=CACHE_HINTS,
+)
 
 _OH = ATTRIBUTIONS["openholidays"]
 _NG = ATTRIBUTIONS["nager"]
@@ -186,6 +206,25 @@ async def _report(ctx: Context | None, done: float, total: float, message: str) 
     """
     if ctx is not None:
         await ctx.report_progress(done, total, message)
+
+
+def _negotiated_protocol_version(ctx: Context | None) -> str:
+    """Die Revision, ueber die DIESE Anfrage hereinkam (Spec 2026-07-28).
+
+    `mcp` 2.x bedient beide Aeren ueber denselben Server, und welche gilt,
+    entscheidet die erste Anfrage einer Verbindung. Ein Server, der stattdessen
+    eine Konstante ausliefert, hat fuer eine der beiden Aeren immer unrecht:
+    vor dieser Aenderung bekam ein Aufrufer, der `2026-07-28` ausgehandelt
+    hatte, `2025-11-25` gemeldet.
+
+    `Context.protocol_version` ist `None` ausserhalb einer aktiven Anfrage;
+    ohne `ctx` ruft der `op_*`-Layer direkt auf (Unit-Tests). Beide Faelle
+    fallen auf die Handshake-Obergrenze zurueck — dort hat niemand etwas
+    ausgehandelt, was zu melden waere.
+    """
+    if ctx is not None and (negotiated := ctx.protocol_version) is not None:
+        return negotiated
+    return FALLBACK_PROTOCOL_VERSION
 
 
 def _canton_of(code: str) -> str:
@@ -740,7 +779,7 @@ async def op_source_status(client: HolidayClient, ctx: Context | None = None) ->
         source=f"{_OH} | {_NG}",
         provenance="live_api",
         retrieved_at=utc_now_iso(),
-        mcp_protocol_version=MCP_PROTOCOL_VERSION,
+        mcp_protocol_version=_negotiated_protocol_version(ctx),
         sources=sources,
         all_healthy=all(s.reachable for s in sources),
     )
