@@ -19,30 +19,42 @@ NAGER_BASE = "https://date.nager.at/api/v3"
 # + review, documented in docs/network-egress.md.
 ALLOWED_HOSTS = frozenset({"openholidaysapi.org", "date.nager.at"})
 
-# ARCH-012: the protocol revision `source_status` reports to callers.
+# ARCH-012: der Rueckfall fuer die Revision, die `source_status` meldet.
 #
-# `mcp` 2.x serves two protocol eras over the same server: the `initialize`
-# handshake, which caps at `LATEST_HANDSHAKE_VERSION`, and the per-request
-# envelope, which reaches `LATEST_MODERN_VERSION`. A single string field cannot
-# name both, so it names the one the caller most likely negotiated — the
-# handshake ceiling. Measured, not inferred from a constant name: a client that
-# asks the handshake for the modern revision gets `2025-11-25` back.
+# `mcp` 2.x bedient zwei Protokoll-Aeren ueber denselben Server: den
+# `initialize`-Handshake, der bei `LATEST_HANDSHAKE_VERSION` deckelt, und den
+# Pro-Request-Envelope, der `LATEST_MODERN_VERSION` erreicht. Welche gilt,
+# entscheidet die erste Anfrage einer Verbindung — nicht der Server.
 #
-# Derived, not written down. A literal here is a second truth beside the SDK,
-# and second truths drift: this constant stood at "2025-06-18" for two
-# revisions while every `source_status` call reported it to the caller as fact.
-# Nothing caught it, because nothing compared it to anything.
-# `tests/test_protocol_version.py` holds both eras against the SDK and checks
-# the delivered field against `LATEST_HANDSHAKE_VERSION` rather than against
-# this constant — a comparison with the value's own source is green for any
-# value.
-MCP_PROTOCOL_VERSION = LATEST_HANDSHAKE_VERSION
+# Deshalb steht hier kein ausgelieferter Wert mehr, sondern nur der Rueckfall.
+# `source_status` liest die tatsaechlich ausgehandelte Revision pro Anfrage aus
+# `Context.protocol_version` und kommt hierher nur, wo es keinen Request-Kontext
+# gibt: der `op_*`-Layer, den die Unit-Tests direkt aufrufen. Dort hat niemand
+# etwas ausgehandelt, und die Handshake-Obergrenze ist das, was ein Aufrufer am
+# ehesten bekaeme.
+#
+# Die vorige Fassung hiess `MCP_PROTOCOL_VERSION` und ging als EINZIGE Antwort
+# an jeden Aufrufer, auch an einen, der `2026-07-28` ausgehandelt hatte. Am
+# 18.9.2026 durch die ASGI-App gemessen: ein moderner Envelope bekam
+# `2025-11-25` zurueck — eine Falschauskunft ueber genau die Verbindung, ueber
+# die sie lief. Der Test dazu war gruen, weil er den gelieferten Wert gegen
+# `LATEST_HANDSHAKE_VERSION` hielt und der In-Process-`Client` der Tests
+# unbemerkt schon modern spricht. Eine Zusicherung, die die falsche Aera
+# abfragt, ist mit jedem Wert gruen.
+#
+# Abgeleitet statt hingeschrieben: ein Literal waere eine zweite Wahrheit neben
+# dem SDK, und zweite Wahrheiten driften. Diese hier stand zwei Revisionen lang
+# auf "2025-06-18", waehrend jede `source_status`-Abfrage sie als Tatsache
+# ausgab. Nichts fiel auf, weil nichts sie mit etwas verglich.
+FALLBACK_PROTOCOL_VERSION = LATEST_HANDSHAKE_VERSION
 
 # SEC-018: bounds for numeric tool inputs (no unbounded ranges).
 MIN_YEAR = 1970
 MAX_YEAR = 2100
 
-USER_AGENT = f"swiss-holidays-mcp/{__version__} (+https://github.com/malkreide/swiss-holidays-mcp)"
+HOMEPAGE_URL = "https://github.com/malkreide/swiss-holidays-mcp"
+
+USER_AGENT = f"swiss-holidays-mcp/{__version__} (+{HOMEPAGE_URL})"
 
 ATTRIBUTION_OPENHOLIDAYS = (
     "Data: OpenHolidays API (openholidaysapi.org) — CC BY 4.0. "

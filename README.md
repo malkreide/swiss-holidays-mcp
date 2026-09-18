@@ -333,24 +333,45 @@ separate city data source is required for them.
   (`holidays://<canton>/<year>`) so clients can read a canton's calendar as
   cacheable context without a tool call. There are no recurring templated
   workflows, so **Prompts** are not used (revisited if that changes).
-- **MCP protocol version — two eras.** `mcp` 2.x serves both over the same
-  server, and the client's first request on a connection decides which applies:
-  the `initialize` handshake caps at **`2025-11-25`**, the per-request envelope
-  reaches **`2026-07-28`**.
+- **MCP protocol version — two eras, both served natively.** `mcp` 2.x serves
+  both over the same server, and the client's first request on a connection
+  decides which applies: the `initialize` handshake caps at **`2025-11-25`**;
+  the per-request envelope era (spec **`2026-07-28`**) has no handshake at all.
+  There every request carries its protocol version, client info and client
+  capabilities in `params._meta`, mirrored by the `Mcp-Protocol-Version` /
+  `Mcp-Method` / `Mcp-Name` routing headers, and `server/discover` takes the
+  place of `initialize`.
 
-  `source_status` surfaces one of them in its `mcp_protocol_version` field — a
-  single string cannot name both — and it surfaces the **handshake ceiling**,
-  because that is what a client reaching this server over `initialize` actually
-  negotiated. Measured, not inferred from a constant name: a client asking the
-  handshake for `2026-07-28` gets `2025-11-25` back.
+  `source_status` reports in `mcp_protocol_version` the revision **this request
+  came in on**, read per request from `Context.protocol_version`. It used to
+  report one constant — the handshake ceiling — to every caller, so a client
+  that had negotiated `2026-07-28` was told `2025-11-25` about its own
+  connection. The constant survives only as the fallback for the `op_*` layer,
+  where nothing was negotiated; it is derived from the SDK's
+  `LATEST_HANDSHAKE_VERSION` rather than written down, so it cannot drift the
+  way it once did — it stood at `2025-06-18` for two revisions while every call
+  reported it as fact.
 
-  `MCP_PROTOCOL_VERSION` is derived from the SDK's `LATEST_HANDSHAKE_VERSION`
-  rather than written down, so it cannot drift the way it once did — it stood
-  at `2025-06-18` for two revisions while every call reported it as fact.
-  [`tests/test_protocol_version.py`](tests/test_protocol_version.py) holds both
-  eras against the SDK and checks the delivered field against the SDK too, not
-  against the constant it came from.
-  The wire version is negotiated by the pinned `mcp` SDK (`mcp>=2.0.0,<3`).
+  Measured, not inferred:
+  [`tests/test_protocol_version.py`](tests/test_protocol_version.py) drives both
+  eras through the same ASGI app this repo serves in production and compares the
+  delivered field per era. The previous version of that file stated the repo
+  could not build such an app — it can, and the claim outlived the measurement
+  by two revisions. A client asking the handshake for `2026-07-28` still gets
+  `2025-11-25` back, now measured here rather than at a sister server. The wire
+  version is negotiated by the pinned `mcp` SDK (`mcp>=2.0.0,<3`).
+- **Server identity travels with every result.** `2026-07-28` has no
+  `initialize` result, so `serverInfo` rides along as a `_meta` stamp on each
+  one — the only place a caller learns which server and which build answered.
+  The server hands `MCPServer` its package version and homepage; without them
+  the SDK stamps `version: ""`, and it never substitutes one of its own. An
+  empty version is worse than an absent one: it looks like an answer.
+- **Freshness hints on the listing methods** (SEP-2549): `tools/list`,
+  `resources/list`, `resources/templates/list` and `server/discover` answer with
+  `ttlMs` 300000 and `cacheScope: public`. Without them the SDK's default is
+  "stale immediately, never shared", which makes every client re-list on every
+  connection — for lists that are fixed at import. `resources/read` carries no
+  hint: `holidays://{canton}/{year}` is a live query, not a directory.
 - **Update policy.** SDK and dependency bumps land via Dependabot (weekly);
   protocol-version or tool-definition changes are recorded in
   [`CHANGELOG.md`](CHANGELOG.md) with a version bump.
