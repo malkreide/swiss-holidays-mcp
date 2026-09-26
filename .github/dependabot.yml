@@ -1,13 +1,21 @@
-# Dependabot — wöchentliche Update-PRs für Dependencies und GitHub Actions.
+# Dependabot — monatliche, gebündelte Update-PRs für Dependencies und GitHub Actions.
 version: 2
 updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
     open-pull-requests-limit: 5
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
     open-pull-requests-limit: 5

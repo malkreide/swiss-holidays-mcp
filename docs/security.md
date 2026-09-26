@@ -64,4 +64,4 @@ result.
 No secrets: the server needs no API keys (both upstreams are keyless). CI runs
 `pip-audit` (with a documented ignore for the disputed pyjwt CVE PYSEC-2025-183,
 a transitive dependency of `mcp` that this server does not use) and Dependabot
-opens weekly dependency PRs.
+opens monthly, grouped dependency PRs.
