@@ -287,7 +287,7 @@ swiss-holidays-mcp/
 ├── audits/                   # mcp-audit-Artefakte
 ├── Dockerfile                # Non-root Multi-Stage-Container
 ├── .github/
-│   ├── dependabot.yml        # Wöchentliche Dependency-/Action-Update-PRs
+│   ├── dependabot.yml        # Monatliche Dependency-/Action-Update-PRs
 │   └── workflows/            # ci.yml, live-tests.yml, publish.yml
 ├── pyproject.toml
 ├── CHANGELOG.md
@@ -378,7 +378,7 @@ Gemeindeebene publiziert sind); dafür ist keine separate Stadt-Datenquelle nöt
   bewusst keinen Hinweis: `holidays://{canton}/{year}` ist eine Live-Abfrage,
   kein Verzeichnis.
 - **Update-Policy.** SDK- und Dependency-Bumps kommen via Dependabot
-  (wöchentlich); Protokoll-Version- oder Tool-Definition-Änderungen werden im
+  (monatlich, gebündelt); Protokoll-Version- oder Tool-Definition-Änderungen werden im
   [`CHANGELOG.md`](CHANGELOG.md) mit Versionssprung dokumentiert.
 
 ## Datenklassifikation

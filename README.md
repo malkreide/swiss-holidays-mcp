@@ -287,7 +287,7 @@ swiss-holidays-mcp/
 ├── audits/                   # mcp-audit run artifacts
 ├── Dockerfile                # Non-root multi-stage container
 ├── .github/
-│   ├── dependabot.yml        # Weekly dependency / action update PRs
+│   ├── dependabot.yml        # Monthly dependency / action update PRs
 │   └── workflows/            # ci.yml, live-tests.yml, publish.yml
 ├── pyproject.toml
 ├── CHANGELOG.md
@@ -372,7 +372,7 @@ separate city data source is required for them.
   "stale immediately, never shared", which makes every client re-list on every
   connection — for lists that are fixed at import. `resources/read` carries no
   hint: `holidays://{canton}/{year}` is a live query, not a directory.
-- **Update policy.** SDK and dependency bumps land via Dependabot (weekly);
+- **Update policy.** SDK and dependency bumps land via Dependabot (monthly, grouped);
   protocol-version or tool-definition changes are recorded in
   [`CHANGELOG.md`](CHANGELOG.md) with a version bump.
 
