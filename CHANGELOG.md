@@ -5,6 +5,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-09-26
+
+**Auslieferungs-Release.** 0.6.0 lag am Tag dieses Schnitts 64 Tage auf PyPI,
+während im Repo unter derselben Nummer 52 Commits dazukamen — 12 davon am
+ausgelieferten Code. Der Verteilweg ist `uvx`, also immer die neueste
+PyPI-Version: wer den Server so bezieht, hatte keine einzige dieser Änderungen.
+Darunter die Migration auf das `mcp`-SDK 2.x und zwei Korrekturen an
+`source_status`, das Aufrufern zwei Spec-Revisionen lang eine falsche
+Protokollversion als Tatsache ausgeliefert hat.
+
+Drei Punkte vorweg, weil sie in den Abschnitten unten weit auseinander stehen:
+
+- **Breaking: `mcp>=2.0.0,<3`** (war `>=1.28.1,<2`). Die Untergrenze ist hart —
+  die Server-API wanderte ohne Kompatibilitätsschicht von
+  `mcp.server.fastmcp` nach `mcp.server.mcpserver`; unter 1.x importiert das
+  Paket nicht.
+- **Verhaltensänderung für Aufrufer: `source_status.mcp_protocol_version`.**
+  Das Feld trug zwischenzeitlich `2026-07-28` und meldet jetzt die
+  Handshake-Obergrenze `2025-11-25` — die Ära, die ein Aufrufer über
+  `initialize` tatsächlich aushandelt. Wer den modernen Pro-Request-Envelope
+  fährt, bekommt die Revision seiner eigenen Anfrage.
+- **Nativ auf Spec `2026-07-28`**, samt `serverInfo`-Stempel mit echter
+  Versionsnummer und Frischehinweisen (SEP-2549) auf den auflistenden Methoden.
+
 ### Added
 
 - **Der Server ist nativ auf Spec `2026-07-28`.** Beide Aeren liefen schon
